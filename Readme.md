@@ -1,1 +1,1 @@
-# openpifpaf-vcoco plugin
+# openpifpaf_vcoco plugin
