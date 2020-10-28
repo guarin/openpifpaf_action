@@ -1,7 +1,9 @@
+# System
 .DS_Store
 .idea
 
 # Python
+env
 *.egg-info
 .eggs/
 __pycache__
