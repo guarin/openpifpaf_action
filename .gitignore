@@ -7,3 +7,8 @@ env
 *.egg-info
 .eggs/
 __pycache__
+
+# Other
+.ipynb_checkpoints
+*.ipynb
+test/
