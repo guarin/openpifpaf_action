@@ -124,6 +124,9 @@ class AifGenerator:
             & (ij[:, 1] + self.config.side_length < self.intensities.shape[1])
         )
 
+        if sum(is_in_field) < 1:
+            return
+
         ij = ij[is_in_field]
         xy = xy[is_in_field]
 
