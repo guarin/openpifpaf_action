@@ -44,15 +44,15 @@ class Aif(Base):
         self._confidences(confidences, annotation_dicts)
         # self._regressions(field[:, 1:3], field[:, 4], annotations=annotations)
 
-    def predicted(self, field):
-        self._confidences(field[:, 0])
-        # self._regressions(
-        #     field[:, 1:3],
-        #     field[:, 4],
-        #     annotations=self._ground_truth,
-        #     confidence_fields=field[:, 0],
-        #     uv_is_offset=False,
-        # )
+    # def predicted(self, field):
+    #     self._confidences(field[:, 0])
+    #     # self._regressions(
+    #     #     field[:, 1:3],
+    #     #     field[:, 4],
+    #     #     annotations=self._ground_truth,
+    #     #     confidence_fields=field[:, 0],
+    #     #     uv_is_offset=False,
+    #     # )
 
     def _confidences(self, confidences, annotations):
         if not self.show_confidences:

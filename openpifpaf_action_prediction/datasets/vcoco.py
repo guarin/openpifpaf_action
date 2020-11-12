@@ -22,7 +22,10 @@ from openpifpaf.datasets.constants import (
 
 from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
-from openpifpaf_action_prediction.datasets.constants import VCOCO_ACTION_NAMES
+from openpifpaf_action_prediction.datasets.constants import (
+    VCOCO_ACTION_NAMES,
+    VCOCO_ACTION_DICT,
+)
 
 
 try:
@@ -51,7 +54,7 @@ class Vcoco(DataModule):
     extended_scale = False
     orientation_invariant = 0.0
     blur = 0.0
-    augmentation = True
+    augmentation = False
     rescale_images = 1.0
     upsample_stride = 1
     min_kp_anns = 1
@@ -62,15 +65,25 @@ class Vcoco(DataModule):
     eval_orientation_invariant = 0.0
     eval_extended_scale = False
 
+    actions = VCOCO_ACTION_NAMES
+    min_actions = 1
+    max_actions = len(VCOCO_ACTION_NAMES)
+    keypoints = None
+    center = True
+
     def __init__(self):
         super().__init__()
+
+        print(self.actions)
+        print("-" * 100)
+        print(self.center)
 
         aif = headmeta.Aif(
             "aif",
             "vcoco",
-            actions=VCOCO_ACTION_NAMES,
-            add_keypoints=False,
-            add_center=True,
+            actions=self.actions,
+            keypoints=self.keypoints,
+            center=self.center,
             keypoint_sigmas=[],
             center_sigma=1,
             pose=COCO_UPRIGHT_POSE,
@@ -109,13 +122,12 @@ class Vcoco(DataModule):
         group.add_argument(
             "--coco-blur", default=cls.blur, type=float, help="augment with blur"
         )
-        assert cls.augmentation
         group.add_argument(
-            "--coco-no-augmentation",
+            "--coco-augmentation",
             dest="coco_augmentation",
-            default=True,
-            action="store_false",
-            help="do not apply data augmentation",
+            default=False,
+            action="store_true",
+            help="apply data augmentation",
         )
         group.add_argument(
             "--coco-rescale-images",
@@ -136,6 +148,34 @@ class Vcoco(DataModule):
             help="filter images with fewer keypoint annotations",
         )
         group.add_argument("--coco-bmin", default=cls.bmin, type=float, help="bmin")
+        # TODO: better help messages
+        group.add_argument(
+            "--actions",
+            default=cls.actions,
+            help="actions",
+            nargs="+",
+        )
+        group.add_argument(
+            "--keypoints", default=cls.keypoints, help="keypoints", nargs="+"
+        )
+        group.add_argument(
+            "--min-actions",
+            default=cls.min_actions,
+            type=int,
+            help="minimum number of actions",
+        )
+        group.add_argument(
+            "--max-actions",
+            default=len(cls.actions),
+            type=int,
+            help="maximum number of actions",
+        )
+        group.add_argument(
+            "--remove-center",
+            default=not cls.center,
+            action="store_true",
+            help="remove center",
+        )
 
         # evaluation
         # eval_set_group = group.add_mutually_exclusive_group()
@@ -190,6 +230,12 @@ class Vcoco(DataModule):
         cls.upsample_stride = args.coco_upsample
         cls.min_kp_anns = args.coco_min_kp_anns
         cls.bmin = args.coco_bmin
+
+        cls.actions = args.actions
+        cls.min_actions = args.min_actions
+        cls.max_actions = args.max_actions
+        cls.keypoints = args.keypoints
+        cls.center = not args.remove_center
 
         # evaluation
         # cls.eval_annotation_filter = args.coco_eval_annotation_filter
@@ -260,6 +306,33 @@ class Vcoco(DataModule):
             ]
         )
 
+    # TODO: this should be in __init__ of Coco, should subclass Coco and change accordingly
+    def _filter_annotations(self, data: Coco):
+        action_indices = [VCOCO_ACTION_DICT[action] for action in self.actions]
+        annotations = []
+        images = set()
+
+        for ann in data.coco.dataset["annotations"]:
+            num_actions = sum([ann["vcoco_action_labels"][i] for i in action_indices])
+            num_keypoints = ann["num_keypoints"]
+            if (
+                (num_actions >= self.min_actions)
+                and (num_actions <= self.max_actions)
+                and (num_keypoints >= self.min_kp_anns)
+            ):
+                annotations.append(ann)
+                images.add(ann["image_id"])
+
+        data.coco.dataset["annotations"] = annotations
+        data.coco.dataset["images"] = [
+            image for image in data.coco.dataset["images"] if image["id"] in images
+        ]
+        data.coco.createIndex()
+        data.ids = data.coco.getImgIds(catIds=data.category_ids)
+
+        print(f"Annotations: {len(data.coco.anns)}")
+        print(f"Images: {len(data.ids)}")
+
     def train_loader(self):
         train_data = Coco(
             image_dir=self.train_image_dir,
@@ -269,6 +342,7 @@ class Vcoco(DataModule):
             min_kp_anns=self.min_kp_anns,
             category_ids=[1],
         )
+        self._filter_annotations(train_data)
         return torch.utils.data.DataLoader(
             train_data,
             batch_size=self.batch_size,
@@ -288,6 +362,7 @@ class Vcoco(DataModule):
             min_kp_anns=self.min_kp_anns,
             category_ids=[1],
         )
+        self._filter_annotations(val_data)
         return torch.utils.data.DataLoader(
             val_data,
             batch_size=self.batch_size,

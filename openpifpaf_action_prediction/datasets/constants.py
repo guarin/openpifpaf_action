@@ -1,3 +1,5 @@
+from openpifpaf.datasets.constants import COCO_KEYPOINTS
+
 VCOCO_ACTION_NAMES = [
     "carry",
     "catch",
@@ -28,3 +30,5 @@ VCOCO_ACTION_NAMES = [
 ]
 
 VCOCO_ACTION_DICT = {name: idx for idx, name in enumerate(VCOCO_ACTION_NAMES)}
+
+COCO_KEYPOINT_DICT = {name: idx for idx, name in enumerate(COCO_KEYPOINTS)}

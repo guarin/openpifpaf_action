@@ -7,9 +7,10 @@ from typing import List, ClassVar, Any
 class Aif(Base):
     actions: List[str]
 
-    add_keypoints: bool
-    add_center: bool
+    keypoints: List[str]
+    center: bool
 
+    # Not used
     keypoint_sigmas: List[float]
     center_sigma: float
 
@@ -28,8 +29,17 @@ class Aif(Base):
     @property
     def sigmas(self):
         sigmas = []
-        if self.add_center:
+        if self.center:
             sigmas.append(self.center_sigma)
         if self.keypoint_sigmas:
             sigmas.extend(self.keypoint_sigmas)
         return sigmas
+
+    @property
+    def keypoint_indices(self):
+        # cannot import as top level because of cyclic dependency when typing
+        from openpifpaf_action_prediction.datasets.constants import COCO_KEYPOINT_DICT
+
+        if self.keypoints:
+            return [COCO_KEYPOINT_DICT[name] for name in self.keypoints]
+        return []

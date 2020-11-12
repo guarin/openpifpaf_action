@@ -84,7 +84,7 @@ class AifGenerator:
         for ann in anns:
             points = []
 
-            if self.config.meta.add_center:
+            if self.config.meta.center:
                 x, y = openpifpaf_action_prediction.utils.bbox_center(ann["bbox"])
 
                 # bring into same format as keypoints, set visibility to 1
@@ -92,21 +92,25 @@ class AifGenerator:
                 points.append(center)
 
             keypoints = np.copy(ann["keypoints"]).astype(float).reshape(-1, 3)
-            if self.config.meta.add_keypoints:
-                points.append(keypoints)
+            if self.config.meta.keypoints:
+                points.append(keypoints[self.config.meta.keypoint_indices])
 
             scale = self.rescaler.scale(keypoints)
-
-            action_labels = datasets.utils.filter_action_labels(
-                ann["vcoco_action_labels"], self.config.meta.actions
-            )
 
             points = np.concatenate(points)
             points[:, :2] = points[:, :2] / self.config.meta.stride
 
-            self.fill_points(points, scale)
+            action_labels = datasets.utils.filter_action_labels(
+                ann["vcoco_action_labels"], self.config.meta.actions
+            )
+            action_mask = np.asarray(action_labels).astype(bool)
 
-    def fill_points(self, points, scale):
+            self.fill_points(points, action_mask, scale)
+
+    def fill_points(self, points, action_mask, scale):
+        if sum(action_mask) < 1:
+            return
+
         xy = points[:, :2]
         visibility = points[:, 2]
 
@@ -132,7 +136,7 @@ class AifGenerator:
 
         length = self.config.side_length
         for (i, j), m in zip(ij, mask):
-            self.intensities[:, j : j + length, i : i + length][:, m] = 1.0
+            self.intensities[:, j : j + length, i : i + length][action_mask, m] = 1.0
 
         # TODO: implement scaling
         # sigmas = np.array(self.config.meta.sigmas)
