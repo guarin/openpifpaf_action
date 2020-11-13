@@ -139,10 +139,19 @@ class AifGenerator:
         mask = sink_l < 0.71
 
         for (i, j), m in zip(ij, mask):
+
             if m.sum() > 0:
-                self.intensities[:, j : j + side_length, i : i + side_length][
-                    action_mask, m
-                ] = 1.0
+                try:
+                    self.intensities[:, j : j + side_length, i : i + side_length][
+                        action_mask, m
+                    ] = 1.0
+                except Exception as ex:
+                    print(ij)
+                    print(i, j)
+                    print(mask)
+                    print(m)
+                    print(self.intensities.shape)
+                    print(action_mask)
             else:
                 print("sum(m) = 0")
 
