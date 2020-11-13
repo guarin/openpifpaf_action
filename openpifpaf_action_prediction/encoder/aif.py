@@ -139,21 +139,11 @@ class AifGenerator:
         mask = sink_l < 0.71
 
         for (i, j), m in zip(ij, mask):
+            # adding m to the array avoids any indexing errors
+            self.intensities[action_mask, j : j + side_length, i : i + side_length] += m
 
-            if m.sum() > 0:
-                try:
-                    self.intensities[:, j : j + side_length, i : i + side_length][
-                        action_mask, m
-                    ] = 1.0
-                except Exception as ex:
-                    print(ij)
-                    print(i, j)
-                    print(mask)
-                    print(m)
-                    print(self.intensities.shape)
-                    print(action_mask)
-            else:
-                print("sum(m) = 0")
+        # convert intensities back to 0 or 1
+        self.intensities = (self.intensities > 0).astype(np.float32)
 
         # TODO: implement scaling
         # sigmas = np.array(self.config.meta.sigmas)
