@@ -234,7 +234,11 @@ class Vcoco(DataModule):
         cls.actions = args.actions
         cls.min_actions = args.min_actions
         cls.max_actions = args.max_actions
-        cls.keypoints = args.keypoints
+        cls.keypoints = (
+            COCO_KEYPOINTS
+            if (args.keypoints is not None) and ("all" in args.keypoints)
+            else args.keypoints
+        )
         cls.center = not args.remove_center
 
         # evaluation
