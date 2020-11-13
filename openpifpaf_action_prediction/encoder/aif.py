@@ -136,21 +136,15 @@ class AifGenerator:
 
         sink_reg = self.sink + offset
         sink_l = np.linalg.norm(sink_reg, axis=1)
-        mask = sink_l < 0.7
+        mask = sink_l < 0.71
 
         for (i, j), m in zip(ij, mask):
-            try:
+            if m.sum() > 0:
                 self.intensities[:, j : j + side_length, i : i + side_length][
                     action_mask, m
                 ] = 1.0
-            except Exception as ex:
-                print(ij)
-                print(i, j)
-                print(mask)
-                print(m)
-                print(action_mask)
-                print(self.intensities.shape)
-                raise ex
+            else:
+                print("sum(m) = 0")
 
         # TODO: implement scaling
         # sigmas = np.array(self.config.meta.sigmas)
