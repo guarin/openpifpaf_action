@@ -117,11 +117,12 @@ class AifGenerator:
         ij = np.round(xy - self.s_offset).astype(np.int) + self.config.padding
 
         # select points that are labeled and inside the image
+        side_length = self.config.side_length
         is_in_field = (
-            (visibility > 0)
-            & (ij.min(1) > 0)
-            & (ij[:, 0] + self.config.side_length < self.intensities.shape[2])
-            & (ij[:, 1] + self.config.side_length < self.intensities.shape[1])
+            (visibility >= 0)
+            & (ij.min(1) >= 0)
+            & (ij[:, 0] + side_length <= self.intensities.shape[2])
+            & (ij[:, 1] + side_length <= self.intensities.shape[1])
         )
 
         if sum(is_in_field) < 1:
@@ -137,9 +138,10 @@ class AifGenerator:
         sink_l = np.linalg.norm(sink_reg, axis=1)
         mask = sink_l < 0.7
 
-        length = self.config.side_length
         for (i, j), m in zip(ij, mask):
-            self.intensities[:, j : j + length, i : i + length][action_mask, m] = 1.0
+            self.intensities[:, j : j + side_length, i : i + side_length][
+                action_mask, m
+            ] = 1.0
 
         # TODO: implement scaling
         # sigmas = np.array(self.config.meta.sigmas)
