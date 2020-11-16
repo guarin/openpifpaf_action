@@ -117,8 +117,16 @@ class Vcoco(openpifpaf.metric.Base):
             self.aggregate()
 
         data = {
-            "predictions": [pred.json_data() for pred in self.predictions],
-            "image_metas": self.image_metas,
+            "predictions": [
+                [pred.json_data() for pred in preds] for preds in self.predictions
+            ],
+            "image_metas": [
+                {
+                    key: value.tolist() if isinstance(value, np.ndarray) else value
+                    for key, value in meta.items()
+                }
+                for meta in self.image_metas
+            ],
             "ground_truths": self.ground_truths,
             "found_centers": self.found_centers,
             "num_centers": self.num_centers,
@@ -127,6 +135,5 @@ class Vcoco(openpifpaf.metric.Base):
             "action_labels": self.action_labels,
             "matchings": self.matchings,
         }
-
         with open(filename + ".pred.json", "w") as file:
             json.dump(data, file)

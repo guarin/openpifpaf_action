@@ -71,10 +71,6 @@ class Vcoco(DataModule):
     def __init__(self):
         super().__init__()
 
-        print(self.actions)
-        print("-" * 100)
-        print(self.center)
-
         aif_center = headmeta.AifCenter(
             "aif_center",
             "vcoco",
@@ -313,7 +309,7 @@ class Vcoco(DataModule):
         annotations = []
         images = set()
 
-        for ann in data.coco.dataset["annotations"]:
+        for ann in data.coco.dataset["annotations"][:20]:
             num_actions = sum([ann["vcoco_action_labels"][i] for i in action_indices])
             num_keypoints = ann["num_keypoints"]
             if (
