@@ -309,7 +309,7 @@ class Vcoco(DataModule):
         annotations = []
         images = set()
 
-        for ann in data.coco.dataset["annotations"][:20]:
+        for ann in data.coco.dataset["annotations"]:
             num_actions = sum([ann["vcoco_action_labels"][i] for i in action_indices])
             num_keypoints = ann["num_keypoints"]
             if (
