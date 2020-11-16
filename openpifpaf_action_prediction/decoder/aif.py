@@ -25,8 +25,8 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     def __call__(self, fields):
         intensities = fields[self.metas[0].head_index]
-        center_intensities = intensities[0]
-        action_intensities = intensities[1:]
+        center_intensities = intensities[0, 0]
+        action_intensities = intensities[1:, 0]
 
         is_center = center_intensities >= self.center_threshold
 
@@ -35,7 +35,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
         ys = js * self.metas[0].base_stride
 
         center_probabilites = center_intensities[is_center]
-        action_probabilites = action_intensities[is_center]
+        action_probabilites = action_intensities[:, is_center]
 
         anns = [
             annotations.AifCenter(
