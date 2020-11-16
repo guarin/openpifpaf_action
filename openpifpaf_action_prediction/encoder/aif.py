@@ -19,8 +19,8 @@ LOG = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
-class Aif:
-    meta: headmeta.Aif
+class AifCenter:
+    meta: headmeta.AifCenter
     rescaler: AnnRescaler = None
     v_threshold: int = 0
     bmin: float = 1.0  #: in pixels
@@ -30,11 +30,11 @@ class Aif:
     padding: ClassVar[int] = 10
 
     def __call__(self, image, anns, meta):
-        return AifGenerator(self)(image, anns, meta)
+        return AifCenterGenerator(self)(image, anns, meta)
 
 
-class AifGenerator:
-    def __init__(self, config: Aif):
+class AifCenterGenerator:
+    def __init__(self, config: AifCenter):
         self.config = config
 
         self.rescaler = config.rescaler or AnnRescaler(
@@ -82,71 +82,49 @@ class AifGenerator:
 
     def fill_fields(self, anns):
         for ann in anns:
-            points = []
+            center = openpifpaf_action_prediction.utils.bbox_center(ann["bbox"])
+            center = np.array(center, dtype=np.float32)
 
-            if self.config.meta.center:
-                x, y = openpifpaf_action_prediction.utils.bbox_center(ann["bbox"])
+            # TODO: add scale
+            # keypoints = np.copy(ann["keypoints"]).astype(float).reshape(-1, 3)
+            # if self.config.meta.keypoints:
+            #     points.append(keypoints[self.config.meta.keypoint_indices])
+            #
+            # scale = self.rescaler.scale(keypoints)
 
-                # bring into same format as keypoints, set visibility to 1
-                center = np.array([x, y, 1.0]).reshape(-1, 3)
-                points.append(center)
-
-            keypoints = np.copy(ann["keypoints"]).astype(float).reshape(-1, 3)
-            if self.config.meta.keypoints:
-                points.append(keypoints[self.config.meta.keypoint_indices])
-
-            scale = self.rescaler.scale(keypoints)
-
-            points = np.concatenate(points)
-            points[:, :2] = points[:, :2] / self.config.meta.stride
+            center = center / self.config.meta.stride
 
             action_labels = datasets.utils.filter_action_labels(
                 ann["vcoco_action_labels"], self.config.meta.actions
             )
+
             action_mask = np.asarray(action_labels).astype(bool)
 
-            self.fill_points(points, action_mask, scale)
+            self.fill_center(center, action_mask)
 
-    def fill_points(self, points, action_mask, scale):
-        if sum(action_mask) < 1:
-            return
+    def fill_center(self, center, action_mask):
+        ij = np.round(center - self.s_offset).astype(np.int) + self.config.padding
 
-        xy = points[:, :2]
-        visibility = points[:, 2]
-
-        ij = np.round(xy - self.s_offset).astype(np.int) + self.config.padding
-
-        # select points that are labeled and inside the image
         side_length = self.config.side_length
-        is_in_field = (
-            (visibility >= 0)
-            & (ij.min(1) >= 0)
-            & (ij[:, 0] + side_length <= self.intensities.shape[2])
-            & (ij[:, 1] + side_length <= self.intensities.shape[1])
-        )
-
-        if sum(is_in_field) < 1:
+        if (
+            (ij.min() < 0)
+            or (ij[0] + side_length > self.intensities.shape[2])
+            or (ij[1] + side_length > self.intensities.shape[1])
+        ):
             return
 
-        ij = ij[is_in_field]
-        xy = xy[is_in_field]
-
-        offset = xy - (ij + self.s_offset - self.config.padding)
-        offset = offset.reshape(xy.shape[0], 2, 1, 1)
+        offset = center - (ij + self.s_offset - self.config.padding)
+        offset = offset.reshape(-1, 2, 1, 1)
 
         sink_reg = self.sink + offset
         sink_l = np.linalg.norm(sink_reg, axis=1)
         mask = sink_l < 0.71
 
-        for (i, j), m in zip(ij, mask):
-            # adding m to the array avoids any indexing errors
-            self.intensities[action_mask, j : j + side_length, i : i + side_length] += m
-
+        index_mask = np.concatenate([[True], action_mask])
+        i, j = ij[0], ij[1]
+        self.intensities[index_mask, j : j + side_length, i : i + side_length] += mask
         # convert intensities back to 0 or 1
         self.intensities = (self.intensities > 0).astype(np.float32)
-
-        # TODO: implement scaling
-        # sigmas = np.array(self.config.meta.sigmas)
 
     # def fill_coordinate(self, f, xyv, scale):
     #     ij = np.round(xyv[:2] - self.s_offset).astype(np.int) + self.config.padding

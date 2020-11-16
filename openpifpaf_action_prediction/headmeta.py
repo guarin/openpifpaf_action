@@ -4,15 +4,8 @@ from typing import List, ClassVar, Any
 
 
 @dataclass
-class Aif(Base):
+class AifCenter(Base):
     actions: List[str]
-
-    keypoints: List[str]
-    center: bool
-
-    # Not used
-    keypoint_sigmas: List[float]
-    center_sigma: float
 
     pose: Any
 
@@ -24,17 +17,12 @@ class Aif(Base):
 
     @property
     def n_fields(self):
-        return len(self.actions)
+        """One field for center confidence and one for each action confidence"""
+        return 1 + len(self.actions)
 
-    @property
-    def sigmas(self):
-        sigmas = []
-        if self.center:
-            sigmas.append(self.center_sigma)
-        if self.keypoint_sigmas:
-            sigmas.extend(self.keypoint_sigmas)
-        return sigmas
 
+@dataclass
+class AifKeypoints(Base):
     @property
     def keypoint_indices(self):
         # cannot import as top level because of cyclic dependency when typing

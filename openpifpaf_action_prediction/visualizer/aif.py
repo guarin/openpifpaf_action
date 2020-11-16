@@ -26,7 +26,7 @@ class Aif(Base):
     show_regressions = False
     show_background = False
 
-    def __init__(self, meta: headmeta.Aif):
+    def __init__(self, meta: headmeta.AifCenter):
         super().__init__(meta.name)
         self.meta = meta
         keypoint_painter = openpifpaf.show.KeypointPainter(monocolor_connections=True)
@@ -79,59 +79,6 @@ class Aif(Base):
                     x, y = utils.bbox_center(bbox)
                     ax.scatter([x], [y], color="red")
                     plot_bbox(ax, bbox, color="cyan")
-
-    # def _regressions(
-    #     self,
-    #     regression_fields,
-    #     scale_fields,
-    #     *,
-    #     annotations=None,
-    #     confidence_fields=None,
-    #     uv_is_offset=True
-    # ):
-    #     if not self.show_regressions:
-    #         return
-    #
-    #     for f in self.indices:
-    #         LOG.debug("%s", self.meta.keypoints[f])
-    #         confidence_field = (
-    #             confidence_fields[f] if confidence_fields is not None else None
-    #         )
-    #
-    #         with self.image_canvas(
-    #             self._processed_image, margin=[0.0, 0.01, 0.05, 0.01]
-    #         ) as ax:
-    #             openpifpaf.show.white_screen(ax, alpha=0.5)
-    #             if annotations:
-    #                 self.annotation_painter.annotations(
-    #                     ax, annotations, color="lightgray"
-    #                 )
-    #             q = openpifpaf.show.quiver(
-    #                 ax,
-    #                 regression_fields[f, :2],
-    #                 confidence_field=confidence_field,
-    #                 xy_scale=self.meta.stride,
-    #                 uv_is_offset=uv_is_offset,
-    #                 cmap="Oranges",
-    #                 clim=(0.5, 1.0),
-    #                 width=0.001,
-    #             )
-    #             openpifpaf.show.boxes(
-    #                 ax,
-    #                 scale_fields[f] / 2.0,
-    #                 confidence_field=confidence_field,
-    #                 regression_field=regression_fields[f, :2],
-    #                 xy_scale=self.meta.stride,
-    #                 cmap="Oranges",
-    #                 fill=False,
-    #                 regression_field_is_offset=uv_is_offset,
-    #             )
-    #             if self.show_margin:
-    #                 openpifpaf.show.margins(
-    #                     ax, regression_fields[f, :6], xy_scale=self.meta.stride
-    #                 )
-    #
-    #             self.colorbar(ax, q)
 
 
 def plot_bbox(ax, bbox, **kwargs):
