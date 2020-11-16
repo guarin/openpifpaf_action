@@ -11,4 +11,4 @@ __pycache__
 # Other
 .ipynb_checkpoints
 *.ipynb
-test/
+test*
