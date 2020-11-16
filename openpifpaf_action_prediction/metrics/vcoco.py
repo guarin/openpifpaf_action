@@ -90,8 +90,8 @@ class Vcoco(openpifpaf.metric.Base):
             voc_ap(
                 torch.Tensor(
                     self.action_predictions,
-                ),
-                torch.tensor(self.action_labels),
+                ).float(),
+                torch.Tensor(self.action_labels).float(),
                 column=i,
             ).item()
             for i in range(len(self.actions))
