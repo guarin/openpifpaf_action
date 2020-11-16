@@ -1,6 +1,5 @@
 import numpy as np
 
-import openpifpaf
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
 
@@ -9,11 +8,10 @@ import openpifpaf.metric.base
 
 class AifCenter(openpifpaf.decoder.Decoder):
 
-    center_threshold = 0.5
+    center_threshold = 0.1
 
     def __init__(self, head_metas):
         super().__init__()
-        print("-" * 10, "Decoder Init")
         self.metas = head_metas
 
     @classmethod
@@ -24,14 +22,19 @@ class AifCenter(openpifpaf.decoder.Decoder):
             if isinstance(meta, headmeta.AifCenter)
         ]
 
+    @classmethod
+    def cli(cls, parser):
+        group = parser.add_argument_group("AifCenter Decoder")
+        group.add_argument(
+            "--center-threshold", default=cls.center_threshold, type=float
+        )
+
     def __call__(self, fields):
         intensities = fields[self.metas[0].head_index]
         center_intensities = intensities[0, 0]
         action_intensities = intensities[1:, 0]
-        print(center_intensities.mean())
         is_center = center_intensities >= self.center_threshold
 
-        print(f"{is_center.sum()} tiles are over threshold")
         js, is_ = np.where(is_center)
         xs = is_ * self.metas[0].base_stride
         ys = js * self.metas[0].base_stride
@@ -47,7 +50,5 @@ class AifCenter(openpifpaf.decoder.Decoder):
                 xs, ys, center_probabilites, action_probabilites
             )
         ]
-
-        print(f"Found {len(anns)} annotations")
 
         return anns
