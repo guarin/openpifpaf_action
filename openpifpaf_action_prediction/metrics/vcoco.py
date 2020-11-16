@@ -53,7 +53,7 @@ class Vcoco(openpifpaf.metric.Base):
 
                 for j, pred in enumerate(preds):
                     pred_x, pred_y = pred.center
-                    if (pred_x - truth_x) ** 2 + (pred_y - truth_y) ** 2 <= 2:
+                    if (pred_x - truth_x) ** 2 + (pred_y - truth_y) ** 2 <= 2 * 4:
                         correct_centers += 1
                         action_predictions.append(pred.action_probabilites)
                         action_labels.append(
