@@ -11,6 +11,7 @@ from openpifpaf_action_prediction.metrics.average_precision import voc_ap
 
 class Vcoco(openpifpaf.metric.Base):
     def __init__(self, actions, eval_data: openpifpaf.datasets.Coco):
+        print("-" * 10, "Metric INIT")
         self.actions = actions
         self.action_indices = [VCOCO_ACTION_DICT[action] for action in actions]
         self.predictions = []

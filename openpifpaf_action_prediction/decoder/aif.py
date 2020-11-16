@@ -13,6 +13,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     def __init__(self, head_metas):
         super().__init__()
+        print("-" * 10, "Decoder Init")
         self.metas = head_metas
 
     @classmethod
@@ -45,5 +46,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
                 xs, ys, center_probabilites, action_probabilites
             )
         ]
+
+        print(f"Found {len(anns)} annotations")
 
         return anns
