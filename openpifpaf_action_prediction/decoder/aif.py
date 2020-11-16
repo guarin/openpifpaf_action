@@ -28,9 +28,10 @@ class AifCenter(openpifpaf.decoder.Decoder):
         intensities = fields[self.metas[0].head_index]
         center_intensities = intensities[0, 0]
         action_intensities = intensities[1:, 0]
-
+        print(center_intensities.mean())
         is_center = center_intensities >= self.center_threshold
 
+        print(f"{is_center.sum()} tiles are over threshold")
         js, is_ = np.where(is_center)
         xs = is_ * self.metas[0].base_stride
         ys = js * self.metas[0].base_stride
