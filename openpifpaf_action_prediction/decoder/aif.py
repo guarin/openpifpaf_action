@@ -44,7 +44,10 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
         anns = [
             annotations.AifCenter(
-                self.metas[0].actions, [x, y], center_prob, action_probs.tolist()
+                self.metas[0].actions,
+                [float(x), float(y)],
+                float(center_prob),
+                action_probs.tolist(),
             )
             for x, y, center_prob, action_probs in zip(
                 xs, ys, center_probabilites, action_probabilites

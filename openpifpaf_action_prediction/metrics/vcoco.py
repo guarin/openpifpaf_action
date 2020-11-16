@@ -128,7 +128,7 @@ class Vcoco(openpifpaf.metric.Base):
                 }
                 for meta in self.image_metas
             ],
-            "ground_truths": self.ground_truths,
+            # "ground_truths": self.ground_truths,
             "found_centers": self.found_centers,
             "num_centers": self.num_centers,
             "correct_centers": self.correct_centers,
@@ -136,5 +136,6 @@ class Vcoco(openpifpaf.metric.Base):
             "action_labels": self.action_labels,
             "matchings": self.matchings,
         }
+
         with open(filename + ".pred.json", "w") as file:
             json.dump(data, file)
