@@ -98,7 +98,14 @@ class Vcoco(openpifpaf.metric.Base):
             for i in range(len(self.actions))
         ]
 
-        text_labels = ["Precision", "Recall", "mAP"]
+        text_labels = [
+            "NumCenters",
+            "CorrectCenters",
+            "FoundCenters",
+            "Precision",
+            "Recall",
+            "mAP",
+        ]
         text_labels.extend([f"{action} AP" for action in self.actions])
 
         precision = (
@@ -109,7 +116,14 @@ class Vcoco(openpifpaf.metric.Base):
         )
         map = np.mean(aps)
 
-        stats = [precision, recall, map]
+        stats = [
+            self.num_centers,
+            self.correct_centers,
+            self.found_centers,
+            precision,
+            recall,
+            map,
+        ]
         stats.extend(aps)
 
         return {"stats": stats, "text_labels": text_labels}
