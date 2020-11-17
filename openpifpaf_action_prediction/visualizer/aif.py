@@ -59,6 +59,7 @@ class Aif(Base):
             return
 
         bboxes = [np.array(ann["bbox"]) for ann in annotations]
+        keypoint_indices = self.meta.keypoint_indices
 
         for f in self.indices:
             # LOG.debug("%s", self.meta.keypoints[f])
@@ -75,10 +76,10 @@ class Aif(Base):
                 )
                 self.colorbar(ax, im)
 
-                for bbox in bboxes:
-                    x, y = utils.bbox_center(bbox)
+                for ann in annotations:
+                    x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
                     ax.scatter([x], [y], color="red")
-                    plot_bbox(ax, bbox, color="cyan")
+                    plot_bbox(ax, np.array(ann["bbox"]), color="cyan")
 
 
 def plot_bbox(ax, bbox, **kwargs):

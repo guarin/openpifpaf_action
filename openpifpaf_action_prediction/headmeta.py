@@ -6,6 +6,7 @@ from typing import List, ClassVar, Any
 @dataclass
 class AifCenter(Base):
     actions: List[str]
+    keypoints: List[str]
 
     pose: Any
 
@@ -19,6 +20,14 @@ class AifCenter(Base):
     def n_fields(self):
         """One field for center confidence and one for each action confidence"""
         return 1 + len(self.actions)
+
+    @property
+    def keypoint_indices(self):
+        from openpifpaf_action_prediction.datasets.constants import COCO_KEYPOINT_DICT
+
+        if self.keypoints:
+            return [COCO_KEYPOINT_DICT[name] for name in self.keypoints]
+        return []
 
 
 @dataclass

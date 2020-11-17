@@ -21,6 +21,7 @@ from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction.datasets.constants import (
     VCOCO_ACTION_NAMES,
     VCOCO_ACTION_DICT,
+    COCO_KEYPOINT_DICT,
 )
 from openpifpaf_action_prediction import metrics
 
@@ -66,7 +67,8 @@ class Vcoco(DataModule):
     actions = VCOCO_ACTION_NAMES
     min_actions = 1
     max_actions = len(VCOCO_ACTION_NAMES)
-    keypoints = None
+    required_keypoints = ["left_hip", "right_hip"]
+    keypoints = ["left_hip", "right_hip"]
     center = True
 
     def __init__(self):
@@ -77,6 +79,7 @@ class Vcoco(DataModule):
             "vcoco",
             actions=self.actions,
             pose=COCO_UPRIGHT_POSE,
+            keypoints=self.keypoints,
         )
         aif_center.upsample_stride = self.upsample_stride
         self.head_metas = [aif_center]
@@ -161,6 +164,9 @@ class Vcoco(DataModule):
             help="maximum number of actions",
         )
         group.add_argument(
+            "--required-keypoints", default=cls.required_keypoints, nargs="+"
+        )
+        group.add_argument(
             "--remove-center",
             default=not cls.center,
             action="store_true",
@@ -229,6 +235,7 @@ class Vcoco(DataModule):
             if (args.keypoints is not None) and ("all" in args.keypoints)
             else args.keypoints
         )
+        cls.required_keypoints = args.required_keypoints
         cls.center = not args.remove_center
 
         # evaluation
@@ -273,7 +280,11 @@ class Vcoco(DataModule):
                 openpifpaf.transforms.RescaleAbsolute(self.square_edge),
                 openpifpaf.transforms.CenterPad(self.square_edge),
                 openpifpaf.transforms.ToAnnotations(
-                    [transforms.annotations.ToAifCenterAnnotations(self.actions)]
+                    [
+                        transforms.annotations.ToAifCenterAnnotations(
+                            self.actions, self.keypoints
+                        )
+                    ]
                 ),
                 openpifpaf.transforms.EVAL_TRANSFORM,
             ]
@@ -320,6 +331,9 @@ class Vcoco(DataModule):
     # TODO: this should be in __init__ of Coco, should subclass Coco and change accordingly
     def _filter_annotations(self, data: Coco):
         action_indices = [VCOCO_ACTION_DICT[action] for action in self.actions]
+        keypoint_indices = [
+            COCO_KEYPOINT_DICT[keypoint] for keypoint in self.required_keypoints
+        ]
         annotations = []
         images = set()
 
@@ -330,6 +344,7 @@ class Vcoco(DataModule):
                 (num_actions >= self.min_actions)
                 and (num_actions <= self.max_actions)
                 and (num_keypoints >= self.min_kp_anns)
+                and all(ann["keypoints"][3 * i + 2] > 0 for i in keypoint_indices)
             ):
                 annotations.append(ann)
                 images.add(ann["image_id"])

@@ -82,8 +82,10 @@ class AifCenterGenerator:
 
     def fill_fields(self, anns):
         for ann in anns:
-            center = openpifpaf_action_prediction.utils.bbox_center(ann["bbox"])
-            center = np.array(center, dtype=np.float32)
+            keypoint_indices = self.config.meta.keypoint_indices
+            keypoints = np.array(ann["keypoints"], dtype=np.float32).reshape(-1, 3)
+            keypoints = keypoints[keypoint_indices, :2]
+            center = keypoints.mean(0)
 
             # TODO: add scale
             # keypoints = np.copy(ann["keypoints"]).astype(float).reshape(-1, 3)
