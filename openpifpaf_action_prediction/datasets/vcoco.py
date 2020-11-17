@@ -15,6 +15,7 @@ from openpifpaf.datasets.constants import (
     HFLIP,
 )
 
+from openpifpaf_action_prediction import transforms
 from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction.datasets.constants import (
@@ -265,6 +266,19 @@ class Vcoco(DataModule):
             ]
         )
 
+    def _eval_preprocess(self):
+        return openpifpaf.transforms.Compose(
+            [
+                openpifpaf.transforms.NormalizeAnnotations(),
+                openpifpaf.transforms.RescaleAbsolute(self.square_edge),
+                openpifpaf.transforms.CenterPad(self.square_edge),
+                openpifpaf.transforms.ToAnnotations(
+                    [transforms.annotations.ToAifCenterAnnotations(self.actions)]
+                ),
+                openpifpaf.transforms.EVAL_TRANSFORM,
+            ]
+        )
+
     def _preprocess(self):
         # TODO: Transforms is not in __init__ of pifpaf
         if not self.augmentation:
@@ -309,7 +323,7 @@ class Vcoco(DataModule):
         annotations = []
         images = set()
 
-        for ann in data.coco.dataset["annotations"]:
+        for ann in data.coco.dataset["annotations"][:10]:
             num_actions = sum([ann["vcoco_action_labels"][i] for i in action_indices])
             num_keypoints = ann["num_keypoints"]
             if (
@@ -374,7 +388,7 @@ class Vcoco(DataModule):
         eval_data = Coco(
             image_dir=self.val_image_dir,
             ann_file=self.val_annotations,
-            preprocess=self._preprocess_no_agumentation(),
+            preprocess=self._eval_preprocess(),
             annotation_filter=True,
             min_kp_anns=self.min_kp_anns,
             category_ids=[1],
@@ -387,7 +401,7 @@ class Vcoco(DataModule):
             pin_memory=self.pin_memory,
             num_workers=self.loader_workers,
             drop_last=True,
-            collate_fn=collate_images_targets_meta,
+            collate_fn=collate_images_anns_meta,
         )
 
     def metrics(self):

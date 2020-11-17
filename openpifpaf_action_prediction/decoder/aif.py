@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
@@ -29,6 +30,10 @@ class AifCenter(openpifpaf.decoder.Decoder):
             "--center-threshold", default=cls.center_threshold, type=float
         )
 
+    @classmethod
+    def configure(cls, args: argparse.Namespace):
+        cls.center_threshold = args.center_threshold
+
     def __call__(self, fields):
         intensities = fields[self.metas[0].head_index]
         center_intensities = intensities[0, 0]
@@ -39,15 +44,19 @@ class AifCenter(openpifpaf.decoder.Decoder):
         xs = is_ * self.metas[0].base_stride
         ys = js * self.metas[0].base_stride
 
-        center_probabilites = center_intensities[is_center]
-        action_probabilites = action_intensities[:, is_center]
+        center_probabilites = center_intensities[is_center].tolist()
+        action_probabilites = (
+            action_intensities[:, is_center]
+            .reshape(-1, action_intensities.shape[0])
+            .tolist()
+        )
 
         anns = [
             annotations.AifCenter(
                 self.metas[0].actions,
                 [float(x), float(y)],
-                float(center_prob),
-                action_probs.tolist(),
+                center_prob,
+                action_probs,
             )
             for x, y, center_prob, action_probs in zip(
                 xs, ys, center_probabilites, action_probabilites

@@ -13,7 +13,6 @@ class Vcoco(openpifpaf.metric.Base):
     def __init__(self, actions, eval_data: openpifpaf.datasets.Coco):
         super().__init__()
         self.actions = actions
-        self.action_indices = [VCOCO_ACTION_DICT[action] for action in actions]
         self.predictions = []
         self.image_metas = []
         self.ground_truths = []
@@ -26,7 +25,7 @@ class Vcoco(openpifpaf.metric.Base):
     def accumulate(self, predictions, image_meta, *, ground_truth=None):
         self.predictions.append(predictions)
         self.image_metas.append(image_meta)
-        self.ground_truths.append(self._annotations_from_image[image_meta["image_id"]])
+        self.ground_truths.append(ground_truth)
         self.is_aggregated = False
 
     def aggregate(self):
@@ -49,28 +48,28 @@ class Vcoco(openpifpaf.metric.Base):
 
             for i, truth in enumerate(truths):
                 found_truth = False
-                truth_x, truth_y = utils.bbox_center(truth["bbox"])
+                truth_center = np.array(truth.center)
 
                 for j, pred in enumerate(preds):
-                    pred_x, pred_y = pred.center
-                    if (pred_x - truth_x) ** 2 + (pred_y - truth_y) ** 2 <= 2 * 4:
-                        correct_centers += 1
-                        action_predictions.append(pred.action_probabilites)
-                        action_labels.append(
-                            [
-                                truth["vcoco_action_labels"][i]
-                                for i in self.action_indices
-                            ]
-                        )
-                        current_matchings.append([i, j])
+                    pred_center = np.array(pred.center)
+                    distance = ((pred_center - truth_center) ** 2).sum()
 
+                    if distance <= 2 * 256:
+                        print("-" * 10, "Found a match!")
+                        print(pred.center_probability, pred.action_probabilities)
+                        correct_centers += 1
+                        action_predictions.append(pred.action_probabilities)
+                        action_labels.append(truth.action_probabilities)
+                        current_matchings.append([i, j])
                         found_truth = True
 
-                if not found_truth:
-                    # store wrong predictions if we did not find a correct center
-                    action_predictions.append([0.0 for _ in self.actions])
-                    action_labels.append([1.0 for _ in self.actions])
-                    current_matchings.append([i, -1])
+                # if not found_truth:
+                #     # store wrong predictions if we did not find a correct center
+                #     action_predictions.append(
+                #         [1.0 if (p == 0) else 0 for p in truth.action_probabilities]
+                #     )
+                #     action_labels.append(truth.action_probabilities)
+                #     current_matchings.append([i, -1])
 
             matchings.append(current_matchings)
 
@@ -90,8 +89,10 @@ class Vcoco(openpifpaf.metric.Base):
             voc_ap(
                 torch.Tensor(
                     self.action_predictions,
-                ).float(),
-                torch.Tensor(self.action_labels).float(),
+                )
+                .reshape(-1, len(self.actions))
+                .float(),
+                torch.Tensor(self.action_labels).reshape(-1, len(self.actions)).float(),
                 column=i,
             ).item()
             for i in range(len(self.actions))

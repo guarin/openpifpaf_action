@@ -5,6 +5,7 @@ from . import datasets
 from . import decoder
 from . import encoder
 from . import metrics
+from . import transforms
 from . import visualizer
 
 from . import annotations
