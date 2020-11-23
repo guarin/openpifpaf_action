@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 
+import matplotlib.pyplot as plt
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
 
@@ -39,6 +40,11 @@ class AifCenter(openpifpaf.decoder.Decoder):
         center_intensities = intensities[0, 0]
         action_intensities = intensities[1:, 0]
         is_center = center_intensities >= self.center_threshold
+
+        plt.imshow(center_intensities)
+        plt.title("Center")
+        plt.colorbar()
+        plt.show()
 
         js, is_ = np.where(is_center)
         xs = is_ * self.metas[0].base_stride

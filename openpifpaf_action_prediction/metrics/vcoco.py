@@ -23,6 +23,7 @@ class Vcoco(openpifpaf.metric.Base):
             self._annotations_from_image[ann["image_id"]].append(ann)
 
     def accumulate(self, predictions, image_meta, *, ground_truth=None):
+        print(image_meta)
         self.predictions.append(predictions)
         self.image_metas.append(image_meta)
         self.ground_truths.append(ground_truth)
