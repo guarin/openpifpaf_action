@@ -1,5 +1,10 @@
 from openpifpaf.datasets.constants import COCO_KEYPOINTS
 
+
+def _index_dict(items):
+    return {name: idx for idx, name in enumerate(items)}
+
+
 VCOCO_ACTION_NAMES = [
     "carry",
     "catch",
@@ -29,6 +34,22 @@ VCOCO_ACTION_NAMES = [
     "work_on_computer",
 ]
 
-VCOCO_ACTION_DICT = {name: idx for idx, name in enumerate(VCOCO_ACTION_NAMES)}
+VCOCO_ACTION_DICT = _index_dict(VCOCO_ACTION_NAMES)
 
-COCO_KEYPOINT_DICT = {name: idx for idx, name in enumerate(COCO_KEYPOINTS)}
+COCO_KEYPOINT_DICT = _index_dict(COCO_KEYPOINTS)
+
+PASCAL_VOC_2012_ACTIONS = [
+    "jumping",
+    "other",
+    "phoning",
+    "playinginstrument",
+    "reading",
+    "ridingbike",
+    "ridinghorse",
+    "running",
+    "takingphoto",
+    "usingcomputer",
+    "walking",
+]
+
+PASCAL_VOC_2012_ACTION_DICT = _index_dict(PASCAL_VOC_2012_ACTIONS)

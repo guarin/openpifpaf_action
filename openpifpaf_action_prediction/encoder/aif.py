@@ -97,7 +97,9 @@ class AifCenterGenerator:
             center = center / self.config.meta.stride
 
             action_labels = datasets.utils.filter_action_labels(
-                ann["vcoco_action_labels"], self.config.meta.actions
+                ann["action_labels"],
+                self.config.meta.actions,
+                self.config.meta.action_dict,
             )
 
             action_mask = np.asarray(action_labels).astype(bool)
@@ -122,63 +124,10 @@ class AifCenterGenerator:
         sink_l = np.linalg.norm(sink_reg, axis=1)
         mask = sink_l < 0.71
 
-        index_mask = np.concatenate([[True], action_mask])
         i, j = ij[0], ij[1]
-        self.intensities[index_mask, j : j + side_length, i : i + side_length] += mask
+        self.intensities[action_mask, j : j + side_length, i : i + side_length] += mask
         # convert intensities back to 0 or 1
         self.intensities = (self.intensities > 0).astype(np.float32)
-
-    # def fill_coordinate(self, f, xyv, scale):
-    #     ij = np.round(xyv[:2] - self.s_offset).astype(np.int) + self.config.padding
-    #     minx, miny = int(ij[0]), int(ij[1])
-    #     maxx, maxy = minx + self.config.side_length, miny + self.config.side_length
-    #     if (
-    #         minx < 0
-    #         or maxx > self.intensities.shape[2]
-    #         or miny < 0
-    #         or maxy > self.intensities.shape[1]
-    #     ):
-    #         return
-    #
-    #     offset = xyv[:2] - (ij + self.s_offset - self.config.padding)
-    #     offset = offset.reshape(2, 1, 1)
-    #
-    #     # mask
-    #     sink_reg = self.sink + offset
-    #     sink_l = np.linalg.norm(sink_reg, axis=0)
-    #     mask = sink_l < self.fields_reg_l[f, miny:maxy, minx:maxx]
-    #     mask_peak = np.logical_and(mask, sink_l < 0.7)
-    #     self.fields_reg_l[f, miny:maxy, minx:maxx][mask] = sink_l[mask]
-    #
-    #     # update intensity
-    #     self.intensities[f, miny:maxy, minx:maxx][mask] = 1.0
-    #     self.intensities[f, miny:maxy, minx:maxx][mask_peak] = 1.0
-    #
-    #     # update regression
-    #     patch = self.fields_reg[f, :, miny:maxy, minx:maxx]
-    #     patch[:, mask] = sink_reg[:, mask]
-    #
-    #     # update bmin
-    #     bmin = self.config.bmin / self.config.meta.stride
-    #     self.fields_bmin[f, miny:maxy, minx:maxx][mask] = bmin
-    #
-    #     # update scale
-    #     assert np.isnan(scale) or 0.0 < scale < 100.0
-    #     self.fields_scale[f, miny:maxy, minx:maxx][mask] = scale
-    #
-    # def fill_keypoints(self, keypoints):
-    #     scale = self.rescaler.scale(keypoints)
-    #     for f, xyv in enumerate(keypoints):
-    #         if xyv[2] <= self.config.v_threshold:
-    #             continue
-    #
-    #         joint_scale = (
-    #             scale
-    #             if self.config.meta.sigmas is None
-    #             else scale * self.config.meta.sigmas[f]
-    #         )
-    #
-    #         self.fill_coordinate(f, xyv, joint_scale)
 
     def fields(self, valid_area):
         p = self.config.padding

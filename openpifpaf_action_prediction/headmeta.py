@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from openpifpaf.headmeta import Base
-from typing import List, ClassVar, Any
+from typing import List, ClassVar, Any, Dict
 
 
 @dataclass
 class AifCenter(Base):
+    action_dict: Dict[str, int]
     actions: List[str]
     keypoints: List[str]
-
     pose: Any
 
     n_confidences: ClassVar[int] = 1
@@ -18,8 +18,7 @@ class AifCenter(Base):
 
     @property
     def n_fields(self):
-        """One field for center confidence and one for each action confidence"""
-        return 1 + len(self.actions)
+        return len(self.actions)
 
     @property
     def keypoint_indices(self):
