@@ -225,8 +225,8 @@ class PascalVOC2012(DataModule):
 
     def _encoders(self):
         return [
-            openpifpaf.encoder.Cif(self.head_metas[0], bmin=self.bmin),
-            openpifpaf.encoder.Caf(self.head_metas[1], bmin=self.bmin),
+            encoder.AifCif(self.head_metas[0], bmin=self.bmin),
+            encoder.AifCaf(self.head_metas[1], bmin=self.bmin),
             encoder.aif.AifCenter(self.head_metas[2], bmin=self.bmin),
         ]
 

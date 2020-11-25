@@ -137,3 +137,17 @@ class AifCenterGenerator:
         intensities = self.intensities[:, p:-p, p:-p]
         mask_valid_area(intensities, valid_area)
         return torch.from_numpy(np.expand_dims(intensities, 1))
+
+
+@dataclasses.dataclass
+class AifCif(openpifpaf.encoder.Cif):
+    def __call__(self, image, anns, meta):
+        anns = [a for a in anns if "keypoints" in a]
+        return openpifpaf.encoder.Cif.__call__(self, image, anns, meta)
+
+
+@dataclasses.dataclass
+class AifCaf(openpifpaf.encoder.Caf):
+    def __call__(self, image, anns, meta):
+        anns = [a for a in anns if "keypoints" in a]
+        return openpifpaf.encoder.Caf.__call__(self, image, anns, meta)
