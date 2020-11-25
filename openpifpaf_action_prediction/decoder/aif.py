@@ -2,10 +2,12 @@ import numpy as np
 import argparse
 
 import matplotlib.pyplot as plt
+from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
 
 import openpifpaf.metric.base
+from openpifpaf.decoder import CifCaf
 
 
 class AifCenter(openpifpaf.decoder.Decoder):
@@ -15,14 +17,17 @@ class AifCenter(openpifpaf.decoder.Decoder):
     def __init__(self, head_metas):
         super().__init__()
         self.metas = head_metas
+        self.cifcaf = None
 
     @classmethod
     def factory(cls, head_metas):
-        return [
+        aif = [
             AifCenter([meta])
             for meta in head_metas
             if isinstance(meta, headmeta.AifCenter)
-        ]
+        ][0]
+        aif.cifcaf = CifCaf.factory(head_metas)[0]
+        return [aif]
 
     @classmethod
     def cli(cls, parser):
@@ -36,37 +41,24 @@ class AifCenter(openpifpaf.decoder.Decoder):
         cls.center_threshold = args.center_threshold
 
     def __call__(self, fields):
-        intensities = fields[self.metas[0].head_index]
-        center_intensities = intensities[0, 0]
-        action_intensities = intensities[1:, 0]
-        is_center = center_intensities >= self.center_threshold
+        meta = self.metas[0]
+        cifcaf_annotations = self.cifcaf(fields)
+        action_probabilities = fields[meta.head_index]
+        anns = []
 
-        plt.imshow(center_intensities)
-        plt.title("Center")
-        plt.colorbar()
-        plt.show()
-
-        js, is_ = np.where(is_center)
-        xs = is_ * self.metas[0].base_stride
-        ys = js * self.metas[0].base_stride
-
-        center_probabilites = center_intensities[is_center].tolist()
-        action_probabilites = (
-            action_intensities[:, is_center]
-            .reshape(-1, action_intensities.shape[0])
-            .tolist()
-        )
-
-        anns = [
-            annotations.AifCenter(
-                self.metas[0].actions,
-                [float(x), float(y)],
-                center_prob,
-                action_probs,
+        for cifcaf_ann in cifcaf_annotations:
+            center = utils.keypoint_center(cifcaf_ann.data, meta.keypoint_indices)
+            center = np.array(center) / meta.stride
+            i, j = np.round(center).astype(int)
+            probabilities = action_probabilities[:, 0, j, i].tolist()
+            anns.append(
+                annotations.AifCenter(
+                    center=center.tolist(),
+                    bbox=cifcaf_ann.bbox(),
+                    actions=meta.actions,
+                    action_probabilities=probabilities,
+                )
             )
-            for x, y, center_prob, action_probs in zip(
-                xs, ys, center_probabilites, action_probabilites
-            )
-        ]
+            anns.append(cifcaf_ann)
 
         return anns

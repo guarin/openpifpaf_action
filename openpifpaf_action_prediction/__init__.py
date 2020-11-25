@@ -26,6 +26,6 @@ def register():
     ] = openpifpaf.network.heads.CompositeField3
     decoder_factory.DECODERS.add(decoder.aif.AifCenter)
 
-    # openpifpaf.transforms.Preprocess.annotations_inverse = (
-    #     lambda annotations, meta: annotations
-    # )
+    openpifpaf.transforms.Preprocess.annotations_inverse = (
+        lambda annotations, meta: annotations
+    )

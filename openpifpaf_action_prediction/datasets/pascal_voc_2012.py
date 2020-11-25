@@ -250,7 +250,9 @@ class PascalVOC2012(DataModule):
                 openpifpaf.transforms.ToAnnotations(
                     [
                         transforms.annotations.ToAifCenterAnnotations(
-                            self.actions, self.keypoints
+                            actions=self.actions,
+                            keypoints=self.keypoints,
+                            action_dict=PASCAL_VOC_2012_ACTION_DICT,
                         )
                     ]
                 ),
@@ -378,17 +380,8 @@ class PascalVOC2012(DataModule):
             collate_fn=collate_images_anns_meta,
         )
 
-    # def metrics(self):
-    #     eval_data = Coco(
-    #         image_dir=self.val_image_dir,
-    #         ann_file=self.val_annotations,
-    #         preprocess=self._preprocess_no_agumentation(),
-    #         annotation_filter=True,
-    #         min_kp_anns=self.min_kp_anns,
-    #         category_ids=[1],
-    #     )
-    #     self._filter_annotations(eval_data)
-    #     return [metrics.vcoco.Vcoco(self.actions, eval_data)]
+    def metrics(self):
+        return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
 
 
 class _PascalVOC2012(torch.utils.data.Dataset):
@@ -416,6 +409,7 @@ class _PascalVOC2012(torch.utils.data.Dataset):
         anns = copy.deepcopy(self._ann_index[filename])
         image_id = filename[:-4]
         local_file_path = os.path.join(self.image_dir, filename)
+
         meta = {
             "dataset_index": index,
             "image_id": image_id,

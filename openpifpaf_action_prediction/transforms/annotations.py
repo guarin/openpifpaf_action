@@ -9,26 +9,29 @@ from openpifpaf_action_prediction.datasets.constants import (
 
 
 class ToAifCenterAnnotations:
-    def __init__(self, actions, keypoints):
+    def __init__(self, actions, keypoints, action_dict):
         self.actions = actions
         self.keypoints = keypoints
         self.keypoint_indices = [
             COCO_KEYPOINT_DICT[keypoint] for keypoint in self.keypoints
         ]
+        self.action_dict = action_dict
 
     def __call__(self, anns):
         result = []
 
         for ann in anns:
             center = utils.keypoint_center(ann["keypoints"], self.keypoint_indices)
-            center_probability = 1.0
             action_probabilities = [
-                ann["vcoco_action_labels"][VCOCO_ACTION_DICT[action]]
+                ann["action_labels"][self.action_dict[action]]
                 for action in self.actions
             ]
             result.append(
                 annotations.AifCenter(
-                    self.actions, center, center_probability, action_probabilities
+                    actions=self.actions,
+                    center=center,
+                    bbox=ann["bbox"],
+                    action_probabilities=action_probabilities,
                 )
             )
         return result

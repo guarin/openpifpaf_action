@@ -82,6 +82,9 @@ class AifCenterGenerator:
 
     def fill_fields(self, anns):
         for ann in anns:
+            if "action_labels" not in ann:
+                continue
+
             keypoint_indices = self.config.meta.keypoint_indices
             keypoints = np.array(ann["keypoints"], dtype=np.float32).reshape(-1, 3)
             keypoints = keypoints[keypoint_indices, :2]

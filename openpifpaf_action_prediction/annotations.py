@@ -2,17 +2,17 @@ import openpifpaf
 
 
 class AifCenter(openpifpaf.annotation.Base):
-    def __init__(self, actions, center, center_probability, action_probabilites):
-        self.actions = actions
+    def __init__(self, center, bbox, actions, action_probabilities):
         self.center = center
-        self.center_probability = center_probability
-        self.action_probabilities = action_probabilites
+        self.bbox = bbox
+        self.actions = actions
+        self.action_probabilities = action_probabilities
 
     def json_data(self):
         data = {
-            "actions": self.actions,
             "center": self.center,
-            "center_probability": self.center_probability,
+            "bbox": self.bbox,
+            "actions": self.actions,
             "action_probabilities": self.action_probabilities,
         }
 
