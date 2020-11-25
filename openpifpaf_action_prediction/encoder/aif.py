@@ -143,6 +143,7 @@ class AifCenterGenerator:
 class AifCif(openpifpaf.encoder.Cif):
     def __call__(self, image, anns, meta):
         anns = [a for a in anns if "keypoints" in a]
+        LOG.debug(anns)
         return openpifpaf.encoder.Cif.__call__(self, image, anns, meta)
 
 
@@ -150,4 +151,5 @@ class AifCif(openpifpaf.encoder.Cif):
 class AifCaf(openpifpaf.encoder.Caf):
     def __call__(self, image, anns, meta):
         anns = [a for a in anns if "keypoints" in a]
+        LOG.debug(anns)
         return openpifpaf.encoder.Caf.__call__(self, image, anns, meta)
