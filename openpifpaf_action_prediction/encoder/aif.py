@@ -154,4 +154,11 @@ class AifCaf(openpifpaf.encoder.Caf):
         anns = [a for a in anns if "keypoints" in a]
         LOG.debug(anns)
         print("CAF --------------------", anns)
-        return openpifpaf.encoder.Caf.__call__(self, image, anns, meta)
+        generator = openpifpaf.encoder.Caf.__call__(self, image, anns, meta)
+        f = generator.fill_keypoints
+
+        def fill_keypoints(self, keypoints):
+            print(keypoints)
+            return f(self, keypoints)
+
+        generator.fill_keypoints = fill_keypoints
