@@ -274,6 +274,7 @@ class CafGenerator:
             print("keypoints", keypoints)
             print("joint1", joint1i)
             print("joint2", joint2i)
+            print("")
             joint1 = keypoints[joint1i]
             joint2 = keypoints[joint2i]
             if (
