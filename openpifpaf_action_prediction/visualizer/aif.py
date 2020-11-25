@@ -35,30 +35,16 @@ class Aif(Base):
         )
 
     def targets(self, field, *, annotation_dicts):
-        # assert self.meta.keypoints is not None
-        # assert self.meta.draw_skeleton is not None
-
-        #
-
         confidences = field[:, 0]
         self._confidences(confidences, annotation_dicts)
-        # self._regressions(field[:, 1:3], field[:, 4], annotations=annotations)
 
     # def predicted(self, field):
-    #     self._confidences(field[:, 0])
-    #     # self._regressions(
-    #     #     field[:, 1:3],
-    #     #     field[:, 4],
-    #     #     annotations=self._ground_truth,
-    #     #     confidence_fields=field[:, 0],
-    #     #     uv_is_offset=False,
-    #     # )
+    #     self._confidences(field[:, 0], self._ground_truth)
 
     def _confidences(self, confidences, annotations):
         if not self.show_confidences:
             return
 
-        bboxes = [np.array(ann["bbox"]) for ann in annotations]
         keypoint_indices = self.meta.keypoint_indices
 
         for f in self.indices:
@@ -77,9 +63,10 @@ class Aif(Base):
                 self.colorbar(ax, im)
 
                 for ann in annotations:
+                    color = "cyan" if "action_labels" in ann else "lime"
                     x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
                     ax.scatter([x], [y], color="red")
-                    plot_bbox(ax, np.array(ann["bbox"]), color="cyan")
+                    plot_bbox(ax, np.array(ann["bbox"]), color=color)
 
 
 def plot_bbox(ax, bbox, **kwargs):

@@ -25,7 +25,7 @@ class AifCenter:
     bmin: float = 1.0  #: in pixels
     visualizer: CifVisualizer = None
 
-    side_length: ClassVar[int] = 4
+    side_length: ClassVar[int] = 10
     padding: ClassVar[int] = 10
 
     def __call__(self, image, anns, meta):
@@ -90,11 +90,6 @@ class AifCenterGenerator:
             center = keypoints.mean(0)
 
             # TODO: add scale
-            # keypoints = np.copy(ann["keypoints"]).astype(float).reshape(-1, 3)
-            # if self.config.meta.keypoints:
-            #     points.append(keypoints[self.config.meta.keypoint_indices])
-            #
-            # scale = self.rescaler.scale(keypoints)
 
             center = center / self.config.meta.stride
 
@@ -124,7 +119,7 @@ class AifCenterGenerator:
 
         sink_reg = self.sink + offset
         sink_l = np.linalg.norm(sink_reg, axis=1)
-        mask = sink_l < 0.71
+        mask = sink_l < (0.71 * self.s_offset)
 
         i, j = ij[0], ij[1]
         self.intensities[action_mask, j : j + side_length, i : i + side_length] += mask

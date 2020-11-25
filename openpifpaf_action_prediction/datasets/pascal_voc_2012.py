@@ -298,37 +298,6 @@ class PascalVOC2012(DataModule):
             ]
         )
 
-    # TODO: this should be in __init__ of Coco, should subclass Coco and change accordingly
-    def _filter_annotations(self, data: Coco):
-        action_indices = [VCOCO_ACTION_DICT[action] for action in self.actions]
-        keypoint_indices = [
-            COCO_KEYPOINT_DICT[keypoint] for keypoint in self.required_keypoints
-        ]
-        annotations = []
-        images = set()
-
-        for ann in data.coco.dataset["annotations"]:
-            num_actions = sum([ann["vcoco_action_labels"][i] for i in action_indices])
-            num_keypoints = ann["num_keypoints"]
-            if (
-                (num_actions >= self.min_actions)
-                and (num_actions <= self.max_actions)
-                and (num_keypoints >= self.min_kp_anns)
-                and all(ann["keypoints"][3 * i + 2] > 0 for i in keypoint_indices)
-            ):
-                annotations.append(ann)
-                images.add(ann["image_id"])
-
-        data.coco.dataset["annotations"] = annotations
-        data.coco.dataset["images"] = [
-            image for image in data.coco.dataset["images"] if image["id"] in images
-        ]
-        data.coco.createIndex()
-        data.ids = data.coco.getImgIds(catIds=data.category_ids)
-
-        print(f"Annotations: {len(data.coco.anns)}")
-        print(f"Images: {len(data.ids)}")
-
     def train_loader(self):
         train_data = _PascalVOC2012(
             image_dir=self.train_image_dir,
