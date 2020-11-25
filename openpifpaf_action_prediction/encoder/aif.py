@@ -272,8 +272,8 @@ class CafGenerator:
         scale = self.rescaler.scale(keypoints)
         for paf_i, (joint1i, joint2i) in enumerate(self.skeleton_m1):
             print("keypoints", keypoints)
-            print("joint1", joint1)
-            print("joint2", joint2)
+            print("joint1", joint1i)
+            print("joint2", joint2i)
             joint1 = keypoints[joint1i]
             joint2 = keypoints[joint2i]
             if (
