@@ -55,6 +55,7 @@ class AifCenterGenerator:
 
         self.init_fields(width, height)
         self.fill_fields(anns)
+        self.mask_unnanotated(anns)
 
         # TODO: does this the right thing
         valid_area = self.rescaler.valid_area(meta)
@@ -86,10 +87,9 @@ class AifCenterGenerator:
 
             keypoint_indices = self.config.meta.keypoint_indices
             keypoints = np.array(ann["keypoints"], dtype=np.float32).reshape(-1, 3)
+            scale = self.rescaler.scale(keypoints) / self.config.meta.stride
             keypoints = keypoints[keypoint_indices, :2]
             center = keypoints.mean(0)
-
-            # TODO: add scale
 
             center = center / self.config.meta.stride
 
@@ -100,10 +100,40 @@ class AifCenterGenerator:
             )
 
             action_mask = np.asarray(action_labels).astype(bool)
+            scale = max(1.0, scale / 5)
+            self.fill_center(center, action_mask, scale)
 
-            self.fill_center(center, action_mask)
+    def mask_unnanotated(self, anns):
+        mask = np.zeros(self.intensities[0].shape).astype(bool)
+        no_action = [a for a in anns if "action_labels" not in a]
+        action = [a for a in anns if "action_labels" in a]
 
-    def fill_center(self, center, action_mask):
+        # hide unannotated regions
+        for ann in no_action:
+            x, y, w, h = ann["bbox"]
+            x_min, y_min, x_max, y_max = (
+                np.array([x, y, x + w, y + h]) / self.config.meta.stride
+            )
+            bbox = np.array(
+                [np.floor(x_min), np.floor(y_min), np.ceil(x_max), np.ceil(y_max)]
+            ).astype(int)
+            i_min, j_min, i_max, j_max = bbox + self.config.padding
+            mask[j_min:j_max, i_min:i_max] = True
+
+        # unhide annotated regions
+        for ann in action:
+            x, y, w, h = ann["bbox"]
+            x_min, y_min, x_max, y_max = (
+                np.array([x, y, x + w, y + h]) / self.config.meta.stride
+            )
+            bbox = np.array(
+                [np.floor(x_min), np.floor(y_min), np.ceil(x_max), np.ceil(y_max)]
+            ).astype(int)
+            i_min, j_min, i_max, j_max = bbox + self.config.padding
+            mask[j_min:j_max, i_min:i_max] = False
+        self.intensities[:, mask] = np.nan
+
+    def fill_center(self, center, action_mask, scale):
         ij = np.round(center - self.s_offset).astype(np.int) + self.config.padding
 
         side_length = self.config.side_length
@@ -119,7 +149,7 @@ class AifCenterGenerator:
 
         sink_reg = self.sink + offset
         sink_l = np.linalg.norm(sink_reg, axis=1)
-        mask = sink_l < (0.71 * self.s_offset)
+        mask = sink_l < (0.71 * scale)
 
         i, j = ij[0], ij[1]
         self.intensities[action_mask, j : j + side_length, i : i + side_length] += mask
