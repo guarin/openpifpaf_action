@@ -365,7 +365,7 @@ class _PascalVOC2012(torch.utils.data.Dataset):
         self.preprocess = preprocess
 
         self.anns = [a for a in json.load(open(ann_file)) if "keypoints" in a]
-        self.image_files = [a["filename"] for a in self.anns]
+        self.image_files = list({a["filename"] for a in self.anns})
         self._ann_index = defaultdict(list)
         for a in self.anns:
             self._ann_index[a["filename"]].append(a)
