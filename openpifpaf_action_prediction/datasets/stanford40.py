@@ -28,7 +28,6 @@ from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction.datasets.constants import (
     STANFORD_40_ACTIONS,
-    STANFORD_40_ACTION_DICT,
 )
 
 from openpifpaf_action_prediction import metrics
@@ -72,7 +71,7 @@ class Stanford40(DataModule):
 
         cif = openpifpaf.headmeta.Cif(
             name="cif",
-            dataset="stanford40",
+            dataset="cocokp",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -82,7 +81,7 @@ class Stanford40(DataModule):
 
         caf = openpifpaf.headmeta.Caf(
             name="caf",
-            dataset="stanford40",
+            dataset="cocokp",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -93,7 +92,6 @@ class Stanford40(DataModule):
             name="aif_center",
             dataset="stanford40",
             actions=self.actions,
-            action_dict=STANFORD_40_ACTION_DICT,
             pose=COCO_UPRIGHT_POSE,
             keypoints=self.keypoints,
         )

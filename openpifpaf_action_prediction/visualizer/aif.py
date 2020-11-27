@@ -53,7 +53,7 @@ class Aif(Base):
             with self.image_canvas(
                 self._processed_image, margin=[0.0, 0.01, 0.05, 0.01]
             ) as ax:
-                ax.set_title(title)
+                ax.set_title(f"{self.meta.actions[f]}  {title}")
                 im = ax.imshow(
                     self.scale_scalar(confidences[f], self.meta.stride),
                     alpha=0.9,

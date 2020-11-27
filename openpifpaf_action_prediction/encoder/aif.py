@@ -82,7 +82,7 @@ class AifCenterGenerator:
 
     def fill_fields(self, anns):
         for ann in anns:
-            if "action_labels" not in ann:
+            if "actions" not in ann:
                 continue
 
             keypoint_indices = self.config.meta.keypoint_indices
@@ -93,11 +93,7 @@ class AifCenterGenerator:
 
             center = center / self.config.meta.stride
 
-            action_labels = datasets.utils.filter_action_labels(
-                ann["action_labels"],
-                self.config.meta.actions,
-                self.config.meta.action_dict,
-            )
+            action_labels = self.config.meta.action_labels(ann["actions"])
 
             action_mask = np.asarray(action_labels).astype(bool)
             scale = max(1.0, scale / 5)
@@ -105,8 +101,8 @@ class AifCenterGenerator:
 
     def mask_unnanotated(self, anns):
         mask = np.zeros(self.intensities[0].shape).astype(bool)
-        no_action = [a for a in anns if "action_labels" not in a]
-        action = [a for a in anns if "action_labels" in a]
+        no_action = [a for a in anns if "actions" not in a]
+        action = [a for a in anns if "actions" in a]
 
         # hide unannotated regions
         for ann in no_action:

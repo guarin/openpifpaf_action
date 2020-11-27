@@ -92,7 +92,6 @@ class PascalVOC2012(DataModule):
         aif_center = headmeta.AifCenter(
             name="aif_center",
             dataset="voc2012",
-            action_dict=PASCAL_VOC_2012_ACTION_DICT,
             actions=self.actions,
             pose=COCO_UPRIGHT_POSE,
             keypoints=self.keypoints,
