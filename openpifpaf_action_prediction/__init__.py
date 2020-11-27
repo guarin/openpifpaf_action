@@ -20,7 +20,7 @@ decoder_factory = importlib.import_module("openpifpaf.decoder.factory")
 
 def register():
     openpifpaf.DATAMODULES["vcoco"] = datasets.vcoco.Vcoco
-    openpifpaf.DATAMODULES["voc2012"] = datasets.pascal_voc_2012.PascalVOC2012
+    openpifpaf.DATAMODULES["voc2012"] = datasets.voc2012.PascalVOC2012
     network_factory.HEAD_FACTORIES[
         headmeta.AifCenter
     ] = openpifpaf.network.heads.CompositeField3

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
+from openpifpaf_action_prediction import visualizer
 
 import openpifpaf.metric.base
 from openpifpaf.decoder import CifCaf
@@ -18,6 +19,8 @@ class AifCenter(openpifpaf.decoder.Decoder):
         super().__init__()
         self.metas = head_metas
         self.cifcaf = None
+        self.visualizer = visualizer.aif.Aif(head_metas[-1])
+        self.visualizer.show_confidences = True
 
     @classmethod
     def factory(cls, head_metas):
