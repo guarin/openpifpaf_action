@@ -36,12 +36,12 @@ class Aif(Base):
 
     def targets(self, field, *, annotation_dicts):
         confidences = field[:, 0]
-        self._confidences(confidences, annotation_dicts)
+        self._confidences(confidences, annotation_dicts, title="target")
 
-    # def predicted(self, field):
-    #     self._confidences(field[:, 0], self._ground_truth)
+    def predicted(self, field):
+        self._confidences(field[:, 0], self._ground_truth, title="predicted")
 
-    def _confidences(self, confidences, annotations):
+    def _confidences(self, confidences, annotations, title):
         if not self.show_confidences:
             return
 
@@ -53,6 +53,7 @@ class Aif(Base):
             with self.image_canvas(
                 self._processed_image, margin=[0.0, 0.01, 0.05, 0.01]
             ) as ax:
+                ax.set_title(title)
                 im = ax.imshow(
                     self.scale_scalar(confidences[f], self.meta.stride),
                     alpha=0.9,
