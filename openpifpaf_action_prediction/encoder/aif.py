@@ -7,11 +7,11 @@ import torch
 
 import openpifpaf
 from openpifpaf.encoder.annrescaler import AnnRescaler
-from openpifpaf.utils import create_sink, mask_valid_area
+from openpifpaf.utils import mask_valid_area
 from openpifpaf.visualizer import Cif as CifVisualizer
 
+from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import headmeta
-from openpifpaf_action_prediction import datasets
 from openpifpaf_action_prediction import visualizer
 
 LOG = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class AifCenter:
     bmin: float = 1.0  #: in pixels
     visualizer: CifVisualizer = None
 
-    side_length: ClassVar[int] = 10
+    side_length: ClassVar[float] = 0.1
     padding: ClassVar[int] = 10
 
     def __call__(self, image, anns, meta):
@@ -45,8 +45,8 @@ class AifCenterGenerator:
         # TODO: check person keypoint rescaling
         self.intensities = None
 
-        self.sink = create_sink(config.side_length)
-        self.s_offset = (config.side_length - 1.0) / 2.0
+        # self.sink = create_sink(config.side_length)
+        # self.s_offset = (config.side_length - 1.0) / 2.0
 
     def __call__(self, image, anns, meta):
         shape = image.shape[2:0:-1]
@@ -87,17 +87,34 @@ class AifCenterGenerator:
 
             keypoint_indices = self.config.meta.keypoint_indices
             keypoints = np.array(ann["keypoints"], dtype=np.float32).reshape(-1, 3)
-            scale = self.rescaler.scale(keypoints) / self.config.meta.stride
             keypoints = keypoints[keypoint_indices, :2]
             center = keypoints.mean(0)
-
             center = center / self.config.meta.stride
 
             action_labels = self.config.meta.action_labels(ann["actions"])
-
             action_mask = np.asarray(action_labels).astype(bool)
-            scale = max(1.0, scale / 5)
+
+            area = utils.bbox_area(ann["bbox"])
+            scale = np.sqrt(area) / self.config.meta.stride
+
             self.fill_center(center, action_mask, scale)
+
+    def fill_center(self, center, action_mask, scale):
+
+        radius = int(np.round(max(1, scale * self.config.side_length)))
+        size = 2 * radius + 1
+
+        ij = np.round(center - radius).astype(np.int) + self.config.padding
+        i, j = ij[0], ij[1]
+
+        if (
+            (ij.min() < 0)
+            or (i + size > self.intensities.shape[2])
+            or (j + size > self.intensities.shape[1])
+        ):
+            return
+
+        self.intensities[action_mask, j : j + size, i : i + size] = 1.0
 
     def mask_unnanotated(self, anns):
         mask = np.zeros(self.intensities[0].shape).astype(bool)
@@ -127,30 +144,8 @@ class AifCenterGenerator:
             ).astype(int)
             i_min, j_min, i_max, j_max = bbox + self.config.padding
             mask[j_min:j_max, i_min:i_max] = False
+
         self.intensities[:, mask] = np.nan
-
-    def fill_center(self, center, action_mask, scale):
-        ij = np.round(center - self.s_offset).astype(np.int) + self.config.padding
-
-        side_length = self.config.side_length
-        if (
-            (ij.min() < 0)
-            or (ij[0] + side_length > self.intensities.shape[2])
-            or (ij[1] + side_length > self.intensities.shape[1])
-        ):
-            return
-
-        offset = center - (ij + self.s_offset - self.config.padding)
-        offset = offset.reshape(-1, 2, 1, 1)
-
-        sink_reg = self.sink + offset
-        sink_l = np.linalg.norm(sink_reg, axis=1)
-        mask = sink_l < (0.71 * scale)
-
-        i, j = ij[0], ij[1]
-        self.intensities[action_mask, j : j + side_length, i : i + side_length] += mask
-        # convert intensities back to 0 or 1
-        self.intensities = (self.intensities > 0).astype(np.float32)
 
     def fields(self, valid_area):
         p = self.config.padding

@@ -9,12 +9,12 @@ import logging
 
 import openpifpaf
 from openpifpaf.datasets.module import DataModule
-from openpifpaf.datasets.coco import Coco
 from openpifpaf.datasets.collate import (
     collate_images_anns_meta,
     collate_images_targets_meta,
 )
 from openpifpaf.datasets.constants import (
+    COCO_CATEGORIES,
     COCO_KEYPOINTS,
     COCO_UPRIGHT_POSE,
     COCO_PERSON_SIGMAS,
@@ -26,13 +26,25 @@ from openpifpaf.datasets.constants import (
 from openpifpaf_action_prediction import transforms
 from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
-from openpifpaf_action_prediction.datasets.constants import (
-    PASCAL_VOC_2012_ACTIONS,
-    PASCAL_VOC_2012_ACTION_DICT,
-)
 from openpifpaf_action_prediction import metrics
+from openpifpaf_action_prediction import utils
 
 LOG = logging.getLogger(__name__)
+
+ACTIONS = [
+    "jumping",
+    "other",
+    "phoning",
+    "playinginstrument",
+    "reading",
+    "ridingbike",
+    "ridinghorse",
+    "running",
+    "takingphoto",
+    "usingcomputer",
+    "walking",
+]
+
 
 # noinspection PyUnresolvedReferences
 class PascalVOC2012(DataModule):
@@ -60,9 +72,9 @@ class PascalVOC2012(DataModule):
     eval_orientation_invariant = 0.0
     eval_extended_scale = False
 
-    actions = PASCAL_VOC_2012_ACTIONS
+    actions = ACTIONS
     min_actions = 1
-    max_actions = len(PASCAL_VOC_2012_ACTIONS)
+    max_actions = len(ACTIONS)
     required_keypoints = ["left_hip", "right_hip"]
     keypoints = ["left_hip", "right_hip"]
     center = True
@@ -241,19 +253,25 @@ class PascalVOC2012(DataModule):
         )
 
     def _eval_preprocess(self):
+        to_kp_annotations = openpifpaf.transforms.ToKpAnnotations(
+            COCO_CATEGORIES,
+            keypoints_by_category={1: self.head_metas[0].keypoints},
+            skeleton_by_category={1: self.head_metas[1].skeleton},
+        )
+        to_aif_center_annotations = transforms.annotations.ToAifCenterAnnotations(
+            to_kp_annotations=to_kp_annotations,
+            actions=self.actions,
+            keypoints=self.keypoints,
+            all_keypoints=COCO_KEYPOINTS,
+        )
+
         return openpifpaf.transforms.Compose(
             [
                 openpifpaf.transforms.NormalizeAnnotations(),
                 openpifpaf.transforms.RescaleAbsolute(self.square_edge),
                 openpifpaf.transforms.CenterPad(self.square_edge),
                 openpifpaf.transforms.ToAnnotations(
-                    [
-                        transforms.annotations.ToAifCenterAnnotations(
-                            actions=self.actions,
-                            keypoints=self.keypoints,
-                            action_dict=PASCAL_VOC_2012_ACTION_DICT,
-                        )
-                    ]
+                    [to_kp_annotations, to_aif_center_annotations]
                 ),
                 openpifpaf.transforms.EVAL_TRANSFORM,
             ]
@@ -349,7 +367,8 @@ class PascalVOC2012(DataModule):
         )
 
     def metrics(self):
-        return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
+        # return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
+        return []
 
 
 class _PascalVOC2012(torch.utils.data.Dataset):

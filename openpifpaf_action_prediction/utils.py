@@ -1,6 +1,12 @@
 import numpy as np
 
 
+def bbox_area(bbox):
+    x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
+    assert (w >= 0) and (h >= 0)
+    return w * h
+
+
 def bbox_center(bbox):
     x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
     return [x + w / 2, y + h / 2]
@@ -29,3 +35,7 @@ def iou(bbox1, bbox2):
     a2 = w2 * h2
     iou = intersection / (a1 + a2 - intersection)
     return iou
+
+
+def index_dict(list):
+    return {value: index for index, value in enumerate(list)}

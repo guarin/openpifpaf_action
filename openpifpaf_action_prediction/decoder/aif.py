@@ -1,26 +1,24 @@
 import numpy as np
 import argparse
 
-import matplotlib.pyplot as plt
 from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import annotations
 from openpifpaf_action_prediction import visualizer
+from openpifpaf_action_prediction import encoder
 
 import openpifpaf.metric.base
 from openpifpaf.decoder import CifCaf
 
 
 class AifCenter(openpifpaf.decoder.Decoder):
-
-    center_threshold = 0.1
-
     def __init__(self, head_metas):
         super().__init__()
         self.metas = head_metas
         self.cifcaf = None
         self.visualizer = visualizer.aif.Aif(head_metas[-1])
         self.visualizer.show_confidences = True
+        self.side_length = encoder.aif.AifCenter.side_length
 
     @classmethod
     def factory(cls, head_metas):
@@ -35,13 +33,10 @@ class AifCenter(openpifpaf.decoder.Decoder):
     @classmethod
     def cli(cls, parser):
         group = parser.add_argument_group("AifCenter Decoder")
-        group.add_argument(
-            "--center-threshold", default=cls.center_threshold, type=float
-        )
 
     @classmethod
     def configure(cls, args: argparse.Namespace):
-        cls.center_threshold = args.center_threshold
+        CifCaf.configure(args)
 
     def __call__(self, fields):
         meta = self.metas[0]
@@ -50,18 +45,35 @@ class AifCenter(openpifpaf.decoder.Decoder):
         anns = []
 
         for cifcaf_ann in cifcaf_annotations:
+            bbox = cifcaf_ann.bbox()
+            area = utils.bbox_area(bbox)
+            scale = np.sqrt(area) / meta.stride
+            radius = int(np.round(max(1, scale * self.side_length)))
+            size = 2 * radius + 1
+
             center = utils.keypoint_center(cifcaf_ann.data, meta.keypoint_indices)
             center = np.array(center) / meta.stride
-            i, j = np.round(center).astype(int)
-            probabilities = action_probabilities[:, 0, j, i].tolist()
+            i, j = np.round(center - radius).astype(int)
+
+            probability_fields = action_probabilities[:, 0]
+            n_fields, height, width = probability_fields.shape
+            if (i < 0) or (i >= width) or (j < 0) or (j >= height):
+                continue
+
+            # select max probability in region around center
+            probabilities = (
+                probability_fields[:, j : j + size, i : i + size].max((1, 2)).tolist()
+            )
             anns.append(
                 annotations.AifCenter(
-                    center=center.tolist(),
-                    bbox=cifcaf_ann.bbox(),
-                    actions=meta.actions,
+                    keypoint_ann=cifcaf_ann,
+                    keypoint_indices=meta.keypoint_indices,
+                    true_actions=None,
+                    all_actions=meta.actions,
                     action_probabilities=probabilities,
                 )
             )
-            anns.append(cifcaf_ann)
 
+        anns.extend(cifcaf_annotations)
+        self.visualizer.predicted(action_probabilities)
         return anns

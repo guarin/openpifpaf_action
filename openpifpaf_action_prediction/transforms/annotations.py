@@ -1,36 +1,45 @@
 import openpifpaf
 
+from openpifpaf_action_prediction import datasets
 from openpifpaf_action_prediction import annotations
 from openpifpaf_action_prediction import utils
-from openpifpaf_action_prediction.datasets.constants import (
-    VCOCO_ACTION_DICT,
-    COCO_KEYPOINT_DICT,
-)
 
 
 class ToAifCenterAnnotations:
-    def __init__(self, actions, keypoints, action_dict):
+    def __init__(self, to_kp_annotations, actions, keypoints, all_keypoints):
+        self.to_kp_annotations = to_kp_annotations
         self.actions = actions
         self.keypoints = keypoints
-        self.keypoint_indices = [
-            COCO_KEYPOINT_DICT[keypoint] for keypoint in self.keypoints
-        ]
-        self.action_dict = action_dict
+        self.all_keypoints = all_keypoints
+        keypoint_dict = utils.index_dict(all_keypoints)
+        self.keypoint_indices = [keypoint_dict[keypoint] for keypoint in self.keypoints]
+        self.action_dict = utils.index_dict(self.actions)
 
     def __call__(self, anns):
         result = []
 
         for ann in anns:
-            center = utils.keypoint_center(ann["keypoints"], self.keypoint_indices)
-            action_probabilities = [
-                ann["action_labels"][self.action_dict[action]]
-                for action in self.actions
-            ]
+            if "actions" not in ann:
+                continue
+
+            kp_ann = openpifpaf.annotation.Annotation(
+                self.to_kp_annotations.keypoints_by_category[ann["category_id"]],
+                self.to_kp_annotations.skeleton_by_category[ann["category_id"]],
+                categories=self.to_kp_annotations.categories,
+            )
+            kp_ann.set(
+                ann["keypoints"], category_id=ann["category_id"], fixed_score=None
+            )
+
+            action_probabilities = datasets.utils.action_labels(
+                ann["actions"], self.action_dict
+            )
             result.append(
                 annotations.AifCenter(
-                    actions=self.actions,
-                    center=center,
-                    bbox=ann["bbox"],
+                    keypoint_ann=kp_ann,
+                    keypoint_indices=self.keypoint_indices,
+                    true_actions=ann["actions"],
+                    all_actions=self.actions,
                     action_probabilities=action_probabilities,
                 )
             )

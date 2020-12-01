@@ -26,13 +26,55 @@ from openpifpaf.datasets.constants import (
 from openpifpaf_action_prediction import transforms
 from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
-from openpifpaf_action_prediction.datasets.constants import (
-    STANFORD_40_ACTIONS,
-)
 
 from openpifpaf_action_prediction import metrics
 
 LOG = logging.getLogger(__name__)
+
+
+ACTIONS = [
+    "applauding",
+    "blowing_bubbles",
+    "brushing_teeth",
+    "cleaning_the_floor",
+    "climbing",
+    "cooking",
+    "cutting_trees",
+    "cutting_vegetables",
+    "drinking",
+    "feeding_a_horse",
+    "fishing",
+    "fixing_a_bike",
+    "fixing_a_car",
+    "gardening",
+    "holding_an_umbrella",
+    "jumping",
+    "looking_through_a_microscope",
+    "looking_through_a_telescope",
+    "phoning",
+    "playing_guitar",
+    "playing_violin",
+    "pouring_liquid",
+    "pushing_a_cart",
+    "reading",
+    "riding_a_bike",
+    "riding_a_horse",
+    "rowing_a_boat",
+    "running",
+    "shooting_an_arrow",
+    "smoking",
+    "taking_photos",
+    "texting_message",
+    "throwing_frisby",
+    "using_a_computer",
+    "walking_the_dog",
+    "washing_dishes",
+    "watching_tv",
+    "waving_hands",
+    "writing_on_a_board",
+    "writing_on_a_book",
+]
+
 
 # noinspection PyUnresolvedReferences
 class Stanford40(DataModule):
@@ -60,9 +102,9 @@ class Stanford40(DataModule):
     eval_orientation_invariant = 0.0
     eval_extended_scale = False
 
-    actions = STANFORD_40_ACTIONS
+    actions = ACTIONS
     min_actions = 1
-    max_actions = len(STANFORD_40_ACTIONS)
+    max_actions = len(ACTIONS)
     required_keypoints = ["left_hip", "right_hip"]
     keypoints = ["left_hip", "right_hip"]
 

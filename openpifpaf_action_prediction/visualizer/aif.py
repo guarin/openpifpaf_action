@@ -53,7 +53,7 @@ class Aif(Base):
             with self.image_canvas(
                 self._processed_image, margin=[0.0, 0.01, 0.05, 0.01]
             ) as ax:
-                ax.set_title(f"{self.meta.actions[f]}  {title}")
+                ax.annotate(f"{self.meta.actions[f]}  {title}", (0, 0))
                 im = ax.imshow(
                     self.scale_scalar(confidences[f], self.meta.stride),
                     alpha=0.9,
@@ -63,11 +63,12 @@ class Aif(Base):
                 )
                 self.colorbar(ax, im)
 
-                for ann in annotations:
-                    color = "cyan" if "action_labels" in ann else "lime"
-                    x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
-                    ax.scatter([x], [y], color="red")
-                    plot_bbox(ax, np.array(ann["bbox"]), color=color)
+                if annotations:
+                    for ann in annotations:
+                        color = "cyan" if "actions" in ann else "lime"
+                        x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
+                        ax.scatter([x], [y], color="red")
+                        plot_bbox(ax, np.array(ann["bbox"]), color=color)
 
 
 def plot_bbox(ax, bbox, **kwargs):

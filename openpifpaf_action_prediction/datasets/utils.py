@@ -1,11 +1,10 @@
-from openpifpaf_action_prediction.datasets import constants
 import copy
 
 
 def action_labels(actions, action_dict):
-    labels = [0] * len(action_dict)
+    labels = [0.0] * len(action_dict)
     for action in actions:
-        labels[action_dict[action]] = 1
+        labels[action_dict[action]] = 1.0
     return labels
 
 
