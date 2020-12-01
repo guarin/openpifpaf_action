@@ -17,7 +17,9 @@ class AifPainter:
         self, ax, anns, *, color=None, colors=None, texts=None, subtexts=None
     ):
         anns = [a for a in anns if isinstance(a, annotations.AifCenter)]
-        print(color)
+
+        # check if ground truth or predictions
+        # TODO: make this less hacky
         if color == "grey":
             self.ground_truths = anns
         else:

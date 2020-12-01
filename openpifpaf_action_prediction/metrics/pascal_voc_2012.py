@@ -20,9 +20,13 @@ class PascalVOC2012(openpifpaf.metric.Base):
         self.action_predictions = []
 
     def accumulate(self, predictions, image_meta, *, ground_truth=None):
-        predictions = [
-            truth for truth in predictions if isinstance(truth, annotations.AifCenter)
-        ]
+        predictions = [a for a in predictions if isinstance(a, annotations.AifCenter)]
+        if ground_truth is not None:
+            ground_truth = [
+                a for a in ground_truth if isinstance(a, annotations.AifCenter)
+            ]
+        else:
+            ground_truth = []
         self.predictions.append(predictions)
         self.image_metas.append(image_meta)
         self.ground_truths.append(ground_truth)

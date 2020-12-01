@@ -367,8 +367,7 @@ class PascalVOC2012(DataModule):
         )
 
     def metrics(self):
-        # return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
-        return []
+        return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
 
 
 class _PascalVOC2012(torch.utils.data.Dataset):
