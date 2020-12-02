@@ -20,7 +20,7 @@ class AifCenter(openpifpaf.annotation.Base):
 
     @property
     def bbox(self):
-        return self.keypoint_ann.bbox()
+        return [float(x) for x in self.keypoint_ann.bbox()]
 
     @property
     def center(self):
@@ -33,5 +33,4 @@ class AifCenter(openpifpaf.annotation.Base):
             "all_actions": self.all_actions,
             "action_probabilities": self.action_probabilities,
         }
-
         return data

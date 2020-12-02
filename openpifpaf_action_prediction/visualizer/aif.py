@@ -4,7 +4,6 @@ import numpy as np
 
 import openpifpaf
 from openpifpaf.visualizer.base import Base
-from openpifpaf.annotation import Annotation
 
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import utils
@@ -68,16 +67,4 @@ class Aif(Base):
                         color = "cyan" if "actions" in ann else "lime"
                         x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
                         ax.scatter([x], [y], color="red")
-                        plot_bbox(ax, np.array(ann["bbox"]), color=color)
-
-
-def plot_bbox(ax, bbox, **kwargs):
-    x, y, w, h = bbox
-    edges = [
-        ([x, x], [y, y + h]),
-        ([x, x + w], [y, y]),
-        ([x, x + w], [y + h, y + h]),
-        ([x + w, x + w], [y, y + h]),
-    ]
-    for xs, ys in edges:
-        ax.plot(xs, ys, **kwargs)
+                        utils.plot_bbox(ax, np.array(ann["bbox"]), color=color)

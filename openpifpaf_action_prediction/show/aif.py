@@ -103,7 +103,7 @@ class AifPainter:
             range(len(score_texts)), score_texts, action_texts, colors
         ):
             ax.scatter([x], [y], color=color)
-            plot_bbox(ax, bbox, color=color)
+            utils.plot_bbox(ax, bbox, color=color)
             if color in ["green"]:
                 self.kp_painter.annotation(ax, kp_ann, color=color)
 
@@ -149,15 +149,3 @@ class AifPainter:
                 color="white",
                 bbox={"facecolor": color, "alpha": 0.5, "linewidth": 0},
             )
-
-
-def plot_bbox(ax, bbox, **kwargs):
-    x, y, w, h = bbox
-    edges = [
-        ([x, x], [y, y + h]),
-        ([x, x + w], [y, y]),
-        ([x, x + w], [y + h, y + h]),
-        ([x + w, x + w], [y, y + h]),
-    ]
-    for xs, ys in edges:
-        ax.plot(xs, ys, **kwargs)
