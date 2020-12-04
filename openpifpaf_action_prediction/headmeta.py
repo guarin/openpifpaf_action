@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from openpifpaf.headmeta import Base
 from typing import List, ClassVar, Any
 from openpifpaf_action_prediction import utils
-from openpifpaf.datasets.constants import COCO_KEYPOINTS
+from openpifpaf.plugins.coco.constants import COCO_KEYPOINTS
 
 _COCO_KEYPOINT_DICT = utils.index_dict(COCO_KEYPOINTS)
 

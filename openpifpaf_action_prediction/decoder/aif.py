@@ -22,13 +22,16 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     @classmethod
     def factory(cls, head_metas):
-        aif = [
+        decoders = [
             AifCenter([meta])
             for meta in head_metas
             if isinstance(meta, headmeta.AifCenter)
-        ][0]
-        aif.cifcaf = CifCaf.factory(head_metas)[0]
-        return [aif]
+        ]
+        if decoders:
+            aif = decoders[0]
+            aif.cifcaf = CifCaf.factory(head_metas)[0]
+            return [aif]
+        return []
 
     @classmethod
     def cli(cls, parser):

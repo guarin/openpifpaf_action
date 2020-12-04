@@ -9,12 +9,11 @@ import logging
 
 import openpifpaf
 from openpifpaf.datasets.module import DataModule
-from openpifpaf.datasets.coco import Coco
 from openpifpaf.datasets.collate import (
     collate_images_anns_meta,
     collate_images_targets_meta,
 )
-from openpifpaf.datasets.constants import (
+from openpifpaf.plugins.coco.constants import (
     COCO_KEYPOINTS,
     COCO_UPRIGHT_POSE,
     COCO_PERSON_SIGMAS,
@@ -288,7 +287,6 @@ class Stanford40(DataModule):
                         transforms.annotations.ToAifCenterAnnotations(
                             actions=self.actions,
                             keypoints=self.keypoints,
-                            action_dict=STANFORD_40_ACTION_DICT,
                         )
                     ]
                 ),

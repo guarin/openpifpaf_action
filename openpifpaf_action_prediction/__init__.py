@@ -41,7 +41,6 @@ def annotations_inverse(anns, meta):
     for aif_ann, kp_ann in zip(aif_anns, keypoint_anns):
         aif_ann.keypoint_ann = kp_ann
 
-    # print(f"Aif annotations: {len(aif_anns)}, KP annotations: {len(other_anns)}")
     other_anns.extend(aif_anns)
     return other_anns
 

@@ -13,47 +13,34 @@ class AifPainter:
         self.predictions = []
         self.kp_painter = openpifpaf.show.KeypointPainter(xy_scale=xy_scale)
 
+    def ground_truth_annotations(
+        self, ax, anns, *, color=None, colors=None, texts=None, subtexts=None
+    ):
+        self.ground_truths = anns
+
     def annotations(
         self, ax, anns, *, color=None, colors=None, texts=None, subtexts=None
     ):
-        anns = [a for a in anns if isinstance(a, annotations.AifCenter)]
-
-        # check if ground truth or predictions
-        # TODO: make this less hacky
-        if color == "grey":
-            self.ground_truths = anns
-        else:
-            self.predictions = anns
-            self.plot_data(ax)
-
-    def plot_data(self, ax):
-
-        pred_matched = set()
-        truth_matched = set()
-        matchings = []
-        iou_scores = [
-            (i, j, utils.iou(truth.bbox, pred.bbox))
-            for i, truth in enumerate(self.ground_truths)
-            for j, pred in enumerate(self.predictions)
+        anns = [
+            a
+            for a in anns
+            if isinstance(a, annotations.AifCenter) and (a.keypoint_ann.score() >= 0.1)
         ]
+        self.predictions = anns
 
-        iou_scores = list(sorted(iou_scores, key=lambda x: x[-1], reverse=True))
-        for i, j, score in iou_scores:
-            if (i in truth_matched) or (j in pred_matched):
-                continue
-            truth_matched.add(i)
-            pred_matched.add(j)
-            matchings.append((self.ground_truths[i], self.predictions[j]))
+    def paint(self, ax):
+        def match_fun(left, right):
+            l_bbox = left.bbox
+            r_bbox = utils.bbox_clamp(
+                right.bbox, width=left.image_width, height=left.image_height
+            )
+            return utils.iou(l_bbox, r_bbox)
 
-        for i, ann in enumerate(self.ground_truths):
-            if i not in truth_matched:
-                matchings.append((ann, None))
+        matchings = utils.match(
+            self.ground_truths, self.predictions, match_fun, threshold=0.3
+        )
 
-        for j, ann in enumerate(self.predictions):
-            if j not in pred_matched:
-                matchings.append((None, ann))
-
-        for truth, pred in matchings:
+        for truth, pred, _ in matchings:
             self.plot_annotation(ax, truth, pred)
 
         self.ground_truths = []
@@ -104,8 +91,8 @@ class AifPainter:
         ):
             ax.scatter([x], [y], color=color)
             utils.plot_bbox(ax, bbox, color=color)
-            if color in ["green"]:
-                self.kp_painter.annotation(ax, kp_ann, color=color)
+            # if color in ["green"]:
+            self.kp_painter.annotation(ax, kp_ann, color=color)
 
             if color in ["green", "yellow", "red"]:
                 ax.annotate(
@@ -117,35 +104,3 @@ class AifPainter:
                     color="white",
                     bbox={"facecolor": face_color, "alpha": 0.5, "linewidth": 0},
                 )
-
-    def annotation(
-        self, ax, ann, *, color=None, colors=None, texts=None, subtexts=None
-    ):
-        action_scores = list(
-            sorted(zip(ann.action_probabilities, ann.all_actions), reverse=True)
-        )
-        action_scores = action_scores[:5]
-
-        if color is None:
-            color = 0
-        if isinstance(color, (int, np.integer)):
-            color = matplotlib.cm.get_cmap("tab20")((color % 20 + 0.05) / 20)
-
-        x, y, w, h = np.array(ann.bbox) * self.xy_scale
-        if w < 5.0:
-            x -= 2.0
-            w += 4.0
-        if h < 5.0:
-            y -= 2.0
-            h += 4.0
-
-        for i, (score, text) in enumerate(action_scores):
-            ax.annotate(
-                f"{score:.2} - {text}",
-                (x, y),
-                fontsize=8,
-                xytext=(5.0, 5.0 + (len(action_scores) - 1 - i) * 15.0),
-                textcoords="offset points",
-                color="white",
-                bbox={"facecolor": color, "alpha": 0.5, "linewidth": 0},
-            )

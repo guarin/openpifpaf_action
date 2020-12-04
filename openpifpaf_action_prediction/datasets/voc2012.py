@@ -13,7 +13,7 @@ from openpifpaf.datasets.collate import (
     collate_images_anns_meta,
     collate_images_targets_meta,
 )
-from openpifpaf.datasets.constants import (
+from openpifpaf.plugins.coco.constants import (
     COCO_CATEGORIES,
     COCO_KEYPOINTS,
     COCO_UPRIGHT_POSE,
@@ -29,6 +29,14 @@ from openpifpaf_action_prediction import encoder
 from openpifpaf_action_prediction import headmeta
 from openpifpaf_action_prediction import metrics
 from openpifpaf_action_prediction import utils
+
+try:
+    import pycocotools.coco
+
+    # monkey patch for Python 3 compat
+    pycocotools.coco.unicode = str
+except ImportError:
+    pass
 
 LOG = logging.getLogger(__name__)
 
@@ -59,6 +67,8 @@ class PascalVOC2012(DataModule):
     eval_image_dir = val_image_dir
 
     kp_dataset = "cocokp"
+    cocokp_val_annotations = "data/mscoco/annotations/person_keypoints_val2017.json"
+    cocokp_val_image_dir = "data/mscoco/images/val2017"
 
     square_edge = 385
     extended_scale = False
@@ -87,7 +97,7 @@ class PascalVOC2012(DataModule):
 
         cif = openpifpaf.headmeta.Cif(
             name="cif",
-            dataset=self.kp_dataset,
+            dataset="voc2012",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -97,7 +107,7 @@ class PascalVOC2012(DataModule):
 
         caf = openpifpaf.headmeta.Caf(
             name="caf",
-            dataset=self.kp_dataset,
+            dataset="voc2012",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -106,7 +116,7 @@ class PascalVOC2012(DataModule):
 
         caf25 = openpifpaf.headmeta.Caf(
             name="caf25",
-            dataset=self.kp_dataset,
+            dataset="voc2012",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -230,6 +240,8 @@ class PascalVOC2012(DataModule):
         cls.train_image_dir = args.voc_train_image_dir
         cls.val_image_dir = args.voc_val_image_dir
 
+        cls.cocokp_val_annotations = args.cocokp_val_annotations
+        cls.cocokp_val_image_dir = args.cocokp_val_image_dir
         cls.kp_dataset = args.voc_kp_dataset
 
         cls.square_edge = args.voc_square_edge
@@ -387,7 +399,14 @@ class PascalVOC2012(DataModule):
         )
 
     def metrics(self):
-        return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
+        return [
+            openpifpaf.metric.Coco(
+                pycocotools.coco.COCO(openpifpaf.plugins.coco.CocoKp.val_annotations),
+                max_per_image=20,
+                category_ids=[1],
+                iou_type="keypoints",
+            )
+        ]
 
 
 class _PascalVOC2012(torch.utils.data.Dataset):

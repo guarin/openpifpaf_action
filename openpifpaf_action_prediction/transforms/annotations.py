@@ -41,6 +41,8 @@ class ToAifCenterAnnotations:
                     true_actions=ann["actions"],
                     all_actions=self.actions,
                     action_probabilities=action_probabilities,
+                    image_width=ann["width"] if "width" in ann else None,
+                    image_height=ann["height"] if "height" in ann else None,
                 )
             )
         return result
