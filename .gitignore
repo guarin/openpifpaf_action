@@ -14,3 +14,4 @@ __pycache__
 test*
 data/
 outputs/
+*.sh
