@@ -20,6 +20,7 @@ from openpifpaf.datasets.constants import (
     COCO_PERSON_SIGMAS,
     COCO_PERSON_SCORE_WEIGHTS,
     COCO_PERSON_SKELETON,
+    DENSER_COCO_PERSON_CONNECTIONS,
     HFLIP,
 )
 
@@ -57,6 +58,8 @@ class PascalVOC2012(DataModule):
     val_image_dir = "data/voc2012/images/"
     eval_image_dir = val_image_dir
 
+    kp_dataset = "cocokp"
+
     square_edge = 385
     extended_scale = False
     orientation_invariant = 0.0
@@ -84,7 +87,7 @@ class PascalVOC2012(DataModule):
 
         cif = openpifpaf.headmeta.Cif(
             name="cif",
-            dataset="cocokp",
+            dataset=self.kp_dataset,
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -94,16 +97,16 @@ class PascalVOC2012(DataModule):
 
         caf = openpifpaf.headmeta.Caf(
             name="caf",
-            dataset="cocokp",
+            dataset=self.kp_dataset,
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
             skeleton=COCO_PERSON_SKELETON,
         )
 
-        caf25 = headmeta.Caf(
+        caf25 = openpifpaf.headmeta.Caf(
             name="caf25",
-            dataset="cocokp",
+            dataset=self.kp_dataset,
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -134,6 +137,8 @@ class PascalVOC2012(DataModule):
         group.add_argument("--voc-val-annotations", default=cls.val_annotations)
         group.add_argument("--voc-train-image-dir", default=cls.train_image_dir)
         group.add_argument("--voc-val-image-dir", default=cls.val_image_dir)
+
+        group.add_argument("--voc-kp-dataset", default=cls.kp_dataset)
 
         group.add_argument(
             "--voc-square-edge",
@@ -225,6 +230,8 @@ class PascalVOC2012(DataModule):
         cls.train_image_dir = args.voc_train_image_dir
         cls.val_image_dir = args.voc_val_image_dir
 
+        cls.kp_dataset = args.voc_kp_dataset
+
         cls.square_edge = args.voc_square_edge
         cls.extended_scale = args.voc_extended_scale
         cls.orientation_invariant = args.voc_orientation_invariant
@@ -250,7 +257,8 @@ class PascalVOC2012(DataModule):
         return [
             encoder.aif.AifCif(self.head_metas[0], bmin=self.bmin),
             encoder.aif.AifCaf(self.head_metas[1], bmin=self.bmin),
-            encoder.aif.AifCenter(self.head_metas[2], bmin=self.bmin),
+            encoder.aif.AifCaf(self.head_metas[2], bmin=self.bmin),
+            encoder.aif.AifCenter(self.head_metas[3], bmin=self.bmin),
         ]
 
     def _preprocess_no_agumentation(self):
