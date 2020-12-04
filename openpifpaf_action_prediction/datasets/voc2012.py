@@ -84,7 +84,7 @@ class PascalVOC2012(DataModule):
 
         cif = openpifpaf.headmeta.Cif(
             name="cif",
-            dataset="voc2012",
+            dataset="cocokp",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -94,11 +94,22 @@ class PascalVOC2012(DataModule):
 
         caf = openpifpaf.headmeta.Caf(
             name="caf",
-            dataset="voc2012",
+            dataset="cocokp",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
             skeleton=COCO_PERSON_SKELETON,
+        )
+
+        caf25 = headmeta.Caf(
+            name="caf25",
+            dataset="cocokp",
+            keypoints=COCO_KEYPOINTS,
+            sigmas=COCO_PERSON_SIGMAS,
+            pose=COCO_UPRIGHT_POSE,
+            skeleton=DENSER_COCO_PERSON_CONNECTIONS,
+            sparse_skeleton=COCO_PERSON_SKELETON,
+            only_in_field_of_view=True,
         )
 
         aif_center = headmeta.AifCenter(
@@ -111,8 +122,9 @@ class PascalVOC2012(DataModule):
 
         cif.upsample_stride = self.upsample_stride
         caf.upsample_stride = self.upsample_stride
+        caf25.upsample_stride = self.upsample_stride
         aif_center.upsample_stride = self.upsample_stride
-        self.head_metas = [cif, caf, aif_center]
+        self.head_metas = [cif, caf, caf25, aif_center]
 
     @classmethod
     def cli(cls, parser: argparse.ArgumentParser):
