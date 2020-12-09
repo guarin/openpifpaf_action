@@ -19,6 +19,7 @@ from openpifpaf.plugins.coco.constants import (
     COCO_PERSON_SIGMAS,
     COCO_PERSON_SCORE_WEIGHTS,
     COCO_PERSON_SKELETON,
+    DENSER_COCO_PERSON_CONNECTIONS,
     HFLIP,
 )
 
@@ -112,7 +113,7 @@ class Stanford40(DataModule):
 
         cif = openpifpaf.headmeta.Cif(
             name="cif",
-            dataset="cocokp",
+            dataset="stanford40",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
@@ -122,11 +123,22 @@ class Stanford40(DataModule):
 
         caf = openpifpaf.headmeta.Caf(
             name="caf",
-            dataset="cocokp",
+            dataset="stanford40",
             keypoints=COCO_KEYPOINTS,
             sigmas=COCO_PERSON_SIGMAS,
             pose=COCO_UPRIGHT_POSE,
             skeleton=COCO_PERSON_SKELETON,
+        )
+
+        caf25 = openpifpaf.headmeta.Caf(
+            name="caf25",
+            dataset="stanford40",
+            keypoints=COCO_KEYPOINTS,
+            sigmas=COCO_PERSON_SIGMAS,
+            pose=COCO_UPRIGHT_POSE,
+            skeleton=DENSER_COCO_PERSON_CONNECTIONS,
+            sparse_skeleton=COCO_PERSON_SKELETON,
+            only_in_field_of_view=True,
         )
 
         aif_center = headmeta.AifCenter(
@@ -139,8 +151,9 @@ class Stanford40(DataModule):
 
         cif.upsample_stride = self.upsample_stride
         caf.upsample_stride = self.upsample_stride
+        caf25.upsample_stride = self.upsample_stride
         aif_center.upsample_stride = self.upsample_stride
-        self.head_metas = [cif, caf, aif_center]
+        self.head_metas = [cif, caf, caf25, aif_center]
 
     @classmethod
     def cli(cls, parser: argparse.ArgumentParser):
@@ -262,7 +275,8 @@ class Stanford40(DataModule):
         return [
             encoder.aif.AifCif(self.head_metas[0], bmin=self.bmin),
             encoder.aif.AifCaf(self.head_metas[1], bmin=self.bmin),
-            encoder.aif.AifCenter(self.head_metas[2], bmin=self.bmin),
+            encoder.aif.AifCaf(self.head_metas[2], bmin=self.bmin),
+            encoder.aif.AifCenter(self.head_metas[3], bmin=self.bmin),
         ]
 
     def _preprocess_no_agumentation(self):
@@ -277,18 +291,25 @@ class Stanford40(DataModule):
         )
 
     def _eval_preprocess(self):
+        to_kp_annotations = openpifpaf.transforms.ToKpAnnotations(
+            COCO_CATEGORIES,
+            keypoints_by_category={1: self.head_metas[0].keypoints},
+            skeleton_by_category={1: self.head_metas[1].skeleton},
+        )
+        to_aif_center_annotations = transforms.annotations.ToAifCenterAnnotations(
+            to_kp_annotations=to_kp_annotations,
+            actions=self.actions,
+            keypoints=self.keypoints,
+            all_keypoints=COCO_KEYPOINTS,
+        )
+
         return openpifpaf.transforms.Compose(
             [
                 openpifpaf.transforms.NormalizeAnnotations(),
                 openpifpaf.transforms.RescaleAbsolute(self.square_edge),
                 openpifpaf.transforms.CenterPad(self.square_edge),
                 openpifpaf.transforms.ToAnnotations(
-                    [
-                        transforms.annotations.ToAifCenterAnnotations(
-                            actions=self.actions,
-                            keypoints=self.keypoints,
-                        )
-                    ]
+                    [to_kp_annotations, to_aif_center_annotations]
                 ),
                 openpifpaf.transforms.EVAL_TRANSFORM,
             ]

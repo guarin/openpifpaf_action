@@ -11,6 +11,7 @@ from . import visualizer
 
 from . import annotations
 from . import headmeta
+from . import match
 from . import utils
 
 # openpifpaf.network.factory module is overwritten in openpifpaf.network.__init__

@@ -63,7 +63,7 @@ def match(
         (i, j, score_fun(l, r)) for i, l in enumerate(left) for j, r in enumerate(right)
     ]
     scores = list(sorted(scores, key=lambda x: x[-1], reverse=True))
-    scores = [x for x in scores if x[-1] >= threshold]
+    scores = [x for x in scores if (x[-1] >= threshold)]
 
     for i, j, score in scores:
         if (i in left_matched) or (j in right_matched):
