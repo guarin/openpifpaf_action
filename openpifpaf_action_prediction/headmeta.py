@@ -10,7 +10,7 @@ _COCO_KEYPOINT_DICT = utils.index_dict(COCO_KEYPOINTS)
 @dataclass
 class AifCenter(Base):
     actions: List[str]
-    keypoints: List[str]
+    center_keypoints: List[List[str]]
     pose: Any
 
     n_confidences: ClassVar[int] = 1
@@ -27,9 +27,12 @@ class AifCenter(Base):
 
     @property
     def keypoint_indices(self):
-        if self.keypoints:
-            return [_COCO_KEYPOINT_DICT[name] for name in self.keypoints]
-        return []
+        if self.center_keypoints:
+            return [
+                [_COCO_KEYPOINT_DICT[kp] for kp in keypoints]
+                for keypoints in self.center_keypoints
+            ]
+        return [[]]
 
     @property
     def action_dict(self):

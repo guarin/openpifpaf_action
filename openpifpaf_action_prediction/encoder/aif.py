@@ -86,10 +86,10 @@ class AifCenterGenerator:
                 continue
 
             keypoint_indices = self.config.meta.keypoint_indices
-            keypoints = np.array(ann["keypoints"], dtype=np.float32).reshape(-1, 3)
-            keypoints = keypoints[keypoint_indices, :2]
-            center = keypoints.mean(0)
-            center = center / self.config.meta.stride
+            centers = np.array(
+                utils.keypoint_centers(ann["keypoints"], keypoint_indices)
+            )
+            centers = centers / self.config.meta.stride
 
             action_labels = self.config.meta.action_labels(ann["actions"])
             action_mask = np.asarray(action_labels).astype(bool)
@@ -97,7 +97,8 @@ class AifCenterGenerator:
             area = utils.bbox_area(ann["bbox"])
             scale = np.sqrt(area) / self.config.meta.stride
 
-            self.fill_center(center, action_mask, scale)
+            for center in centers:
+                self.fill_center(center, action_mask, scale)
 
     def fill_center(self, center, action_mask, scale):
 

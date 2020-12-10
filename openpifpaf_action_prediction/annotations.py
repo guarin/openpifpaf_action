@@ -28,7 +28,7 @@ class AifCenter(openpifpaf.annotation.Base):
 
     @property
     def center(self):
-        return utils.keypoint_center(self.keypoint_ann.data, self.keypoint_indices)
+        return utils.keypoint_centers(self.keypoint_ann.data, self.keypoint_indices)
 
     def json_data(self):
         data = {

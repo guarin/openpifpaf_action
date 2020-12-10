@@ -54,28 +54,34 @@ class AifCenter(openpifpaf.decoder.Decoder):
             radius = int(np.round(max(1, scale * self.side_length)))
             size = 2 * radius + 1
 
-            center = utils.keypoint_center(cifcaf_ann.data, meta.keypoint_indices)
-            center = np.array(center) / meta.stride
-            i, j = np.round(center - radius).astype(int)
+            centers = utils.keypoint_centers(cifcaf_ann.data, meta.keypoint_indices)
+            centers = np.array(centers) / meta.stride
+            int_centers = np.round(centers - radius).astype(int)
 
             probability_fields = action_probabilities[:, 0]
             n_fields, height, width = probability_fields.shape
-            if (i < 0) or (i >= width) or (j < 0) or (j >= height):
-                continue
 
-            # select max probability in region around center
-            probabilities = (
-                probability_fields[:, j : j + size, i : i + size].max((1, 2)).tolist()
-            )
-            anns.append(
-                annotations.AifCenter(
-                    keypoint_ann=cifcaf_ann,
-                    keypoint_indices=meta.keypoint_indices,
-                    true_actions=None,
-                    all_actions=meta.actions,
-                    action_probabilities=probabilities,
+            probabilities = []
+            for i, j in int_centers:
+                if (i < 0) or (i >= width) or (j < 0) or (j >= height):
+                    continue
+
+                # select max probability in region around center
+                probabilities.append(
+                    probability_fields[:, j : j + size, i : i + size].max((1, 2))
                 )
-            )
+
+            if len(probabilities) > 0:
+                probabilities = np.array(probabilities).max(0).tolist()
+                anns.append(
+                    annotations.AifCenter(
+                        keypoint_ann=cifcaf_ann,
+                        keypoint_indices=meta.keypoint_indices,
+                        true_actions=None,
+                        all_actions=meta.actions,
+                        action_probabilities=probabilities,
+                    )
+                )
 
         anns.extend(cifcaf_annotations)
         self.visualizer.predicted(action_probabilities)

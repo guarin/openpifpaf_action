@@ -11,8 +11,7 @@ class ToAifCenterAnnotations:
         self.actions = actions
         self.keypoints = keypoints
         self.all_keypoints = all_keypoints
-        keypoint_dict = utils.index_dict(all_keypoints)
-        self.keypoint_indices = [keypoint_dict[keypoint] for keypoint in self.keypoints]
+        self.keypoint_indices = utils.keypoint_indices(keypoints, all_keypoints)
         self.action_dict = utils.index_dict(self.actions)
 
     def __call__(self, anns):

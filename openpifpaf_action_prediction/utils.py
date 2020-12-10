@@ -1,6 +1,14 @@
 import numpy as np
 
 
+def keypoint_indices(keypoint_names, keypoints):
+    keypoint_dict = index_dict(keypoints)
+    indices = []
+    for names in keypoint_names:
+        indices.append([keypoint_dict[name] for name in names])
+    return indices
+
+
 def bbox_area(bbox):
     x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
     assert (w >= 0) and (h >= 0)
@@ -22,10 +30,12 @@ def bbox_clamp(bbox, width, height):
     return [x1, y1, x2 - x1, y2 - y1]
 
 
-def keypoint_center(keypoints, keypoint_indices):
+def keypoint_centers(keypoints, keypoint_indices):
     keypoints = np.array(keypoints, dtype=np.float32).reshape(-1, 3)
-    keypoints = keypoints[keypoint_indices, :2]
-    return keypoints.mean(0).tolist()
+    centers = []
+    for indices in keypoint_indices:
+        centers.append(keypoints[indices, :2].mean(0).tolist())
+    return centers
 
 
 def iou(bbox1, bbox2):

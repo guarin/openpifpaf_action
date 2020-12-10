@@ -65,6 +65,8 @@ class Aif(Base):
                 if annotations:
                     for ann in annotations:
                         color = "cyan" if "actions" in ann else "lime"
-                        x, y = utils.keypoint_center(ann["keypoints"], keypoint_indices)
+                        x, y = utils.keypoint_centers(
+                            ann["keypoints"], keypoint_indices
+                        )
                         ax.scatter([x], [y], color="red")
                         utils.plot_bbox(ax, np.array(ann["bbox"]), color=color)

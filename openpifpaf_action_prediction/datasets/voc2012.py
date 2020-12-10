@@ -89,7 +89,7 @@ class PascalVOC2012(DataModule):
     min_actions = 1
     max_actions = len(ACTIONS)
     required_keypoints = ["left_hip", "right_hip"]
-    keypoints = ["left_hip", "right_hip"]
+    keypoints = [["left_hip", "right_hip"]]
     center = True
 
     def __init__(self):
@@ -130,7 +130,7 @@ class PascalVOC2012(DataModule):
             dataset="voc2012",
             actions=self.actions,
             pose=COCO_UPRIGHT_POSE,
-            keypoints=self.keypoints,
+            center_keypoints=self.keypoints,
         )
 
         cif.upsample_stride = self.upsample_stride
@@ -205,7 +205,11 @@ class PascalVOC2012(DataModule):
             nargs="+",
         )
         group.add_argument(
-            "--voc-keypoints", default=cls.keypoints, help="keypoints", nargs="+"
+            "--voc-keypoints",
+            default=cls.keypoints,
+            help="keypoints",
+            nargs="+",
+            type=lambda kps: kps.split(","),
         )
         group.add_argument(
             "--voc-min-actions",
@@ -258,9 +262,7 @@ class PascalVOC2012(DataModule):
         cls.min_actions = args.voc_min_actions
         cls.max_actions = args.voc_max_actions
         cls.keypoints = (
-            COCO_KEYPOINTS
-            if (args.voc_keypoints is not None) and ("all" in args.voc_keypoints)
-            else args.voc_keypoints
+            args.voc_keypoints if args.voc_keypoints is not None else cls.keypoints
         )
         cls.required_keypoints = args.voc_required_keypoints
         cls.center = not args.voc_remove_center
