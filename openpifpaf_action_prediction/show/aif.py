@@ -53,7 +53,7 @@ class AifPainter:
         # yellow = ground truth without corresponding prediction
         # blue = prediction without corresponding ground truth
 
-        center = pred.center if pred is not None else truth.center
+        center = pred.center if pred is not None else truth.centers
         center = np.array(center) * self.xy_scale
         bbox = pred.bbox if pred is not None else truth.bbox
         bbox = np.array(bbox) * self.xy_scale

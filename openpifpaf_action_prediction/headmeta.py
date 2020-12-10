@@ -4,8 +4,6 @@ from typing import List, ClassVar, Any
 from openpifpaf_action_prediction import utils
 from openpifpaf.plugins.coco.constants import COCO_KEYPOINTS
 
-_COCO_KEYPOINT_DICT = utils.index_dict(COCO_KEYPOINTS)
-
 
 @dataclass
 class AifCenter(Base):
@@ -28,10 +26,7 @@ class AifCenter(Base):
     @property
     def keypoint_indices(self):
         if self.center_keypoints:
-            return [
-                [_COCO_KEYPOINT_DICT[kp] for kp in keypoints]
-                for keypoints in self.center_keypoints
-            ]
+            return utils.keypoint_indices(self.center_keypoints, COCO_KEYPOINTS)
         return [[]]
 
     @property

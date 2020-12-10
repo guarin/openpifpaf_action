@@ -1,8 +1,8 @@
 import numpy as np
 
 
-def keypoint_indices(keypoint_names, keypoints):
-    keypoint_dict = index_dict(keypoints)
+def keypoint_indices(keypoint_names, all_keypoints):
+    keypoint_dict = index_dict(all_keypoints)
     indices = []
     for names in keypoint_names:
         indices.append([keypoint_dict[name] for name in names])

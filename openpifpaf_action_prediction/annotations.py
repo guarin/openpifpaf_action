@@ -27,13 +27,13 @@ class AifCenter(openpifpaf.annotation.Base):
         return [float(x) for x in self.keypoint_ann.bbox()]
 
     @property
-    def center(self):
+    def centers(self):
         return utils.keypoint_centers(self.keypoint_ann.data, self.keypoint_indices)
 
     def json_data(self):
         data = {
             "bbox": self.bbox,
-            "center": self.center,
+            "centers": self.centers,
             "all_actions": self.all_actions,
             "action_probabilities": self.action_probabilities,
             "image_width": self.image_width,
