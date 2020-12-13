@@ -106,7 +106,7 @@ class Stanford40(DataModule):
     min_actions = 1
     max_actions = len(ACTIONS)
     required_keypoints = ["left_hip", "right_hip"]
-    keypoints = ["left_hip", "right_hip"]
+    keypoints = [["left_hip", "right_hip"]]
 
     def __init__(self):
         super().__init__()
@@ -146,7 +146,7 @@ class Stanford40(DataModule):
             dataset="stanford40",
             actions=self.actions,
             pose=COCO_UPRIGHT_POSE,
-            keypoints=self.keypoints,
+            center_keypoints=self.keypoints,
         )
 
         cif.upsample_stride = self.upsample_stride
@@ -221,7 +221,11 @@ class Stanford40(DataModule):
             nargs="+",
         )
         group.add_argument(
-            "--stanford-keypoints", default=cls.keypoints, help="keypoints", nargs="+"
+            "--stanford-keypoints",
+            default=cls.keypoints,
+            help="keypoints",
+            nargs="+",
+            type=lambda kps: kps.split(","),
         )
         group.add_argument(
             "--stanford-min-actions",
@@ -264,10 +268,7 @@ class Stanford40(DataModule):
         cls.min_actions = args.stanford_min_actions
         cls.max_actions = args.stanford_max_actions
         cls.keypoints = (
-            COCO_KEYPOINTS
-            if (args.stanford_keypoints is not None)
-            and ("all" in args.stanford_keypoints)
-            else args.stanford_keypoints
+            args.stanford_keypoints if args.stanford_keypoints else cls.keypoints
         )
         cls.required_keypoints = args.stanford_required_keypoints
 
