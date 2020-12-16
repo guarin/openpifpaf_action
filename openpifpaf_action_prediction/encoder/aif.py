@@ -104,7 +104,6 @@ class AifCenterGenerator:
 
         radius = int(np.round(max(0, scale * self.config.side_length)))
         size = 2 * radius + 1
-        print(f"scale: {scale}, radius: {radius}")
 
         ij = np.round(center - radius).astype(np.int) + self.config.padding
         i, j = ij[0], ij[1]
