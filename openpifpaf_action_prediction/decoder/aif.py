@@ -51,7 +51,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
             bbox = cifcaf_ann.bbox()
             area = utils.bbox_area(bbox)
             scale = np.sqrt(area) / meta.stride
-            radius = int(np.round(max(1, scale * self.side_length)))
+            radius = int(np.round(max(0, scale * self.side_length)))
             size = 2 * radius + 1
 
             centers = utils.keypoint_centers(cifcaf_ann.data, meta.keypoint_indices)
