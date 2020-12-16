@@ -51,7 +51,7 @@ def register():
     openpifpaf.DATAMODULES["stanford40"] = datasets.stanford40.Stanford40
     network_factory.HEAD_FACTORIES[
         headmeta.AifCenter
-    ] = openpifpaf.network.heads.CompositeField3
+    ] = openpifpaf.network.heads.DeepCompositeField3
     decoder_factory.DECODERS.add(decoder.aif.AifCenter)
     openpifpaf.show.annotation_painter.PAINTERS["AifCenter"] = show.aif.AifPainter
     openpifpaf.show.annotation_painter.PAINTERS["Annotation"] = DummyPainter
