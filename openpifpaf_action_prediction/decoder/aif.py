@@ -58,7 +58,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
     @classmethod
     def configure(cls, args: argparse.Namespace):
         if args.aif_decoder_size_length is not None:
-            cls.side_length = args.aif_decoder_size_length
+            cls.side_length = args.aif_decoder_side_length
             cls.use_encoder_side_length = False
 
         cls.save_radius = args.aif_decoder_save_radius
