@@ -66,6 +66,9 @@ def register():
     openpifpaf.network.HEADS[
         headmeta.AifCenter
     ] = openpifpaf.network.heads.CompositeField3
+    openpifpaf.network.losses.LOSSES[
+        headmeta.AifCenter
+    ] = openpifpaf.network.losses.CompositeLoss
     openpifpaf.decoder.DECODERS.add(decoder.aif.AifCenter)
     openpifpaf.show.annotation_painter.PAINTERS["AifCenter"] = show.aif.AifPainter
     openpifpaf.show.annotation_painter.PAINTERS["Annotation"] = DummyPainter
