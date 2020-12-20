@@ -63,9 +63,9 @@ def annotations_inverse(anns, meta):
 def register():
     openpifpaf.DATAMODULES["voc2012"] = datasets.voc2012.PascalVOC2012
     openpifpaf.DATAMODULES["stanford40"] = datasets.stanford40.Stanford40
-    openpifpaf.network.HEAD_FACTORIES[
+    openpifpaf.network.HEADS[
         headmeta.AifCenter
-    ] = openpifpaf.network.heads.DeepCompositeField3
+    ] = openpifpaf.network.heads.CompositeField3
     openpifpaf.decoder.DECODERS.add(decoder.aif.AifCenter)
     openpifpaf.show.annotation_painter.PAINTERS["AifCenter"] = show.aif.AifPainter
     openpifpaf.show.annotation_painter.PAINTERS["Annotation"] = DummyPainter
