@@ -124,3 +124,31 @@ def plot_image(ax, filepath, **kwargs):
 
     image = PIL.Image.open(filepath)
     ax.imshow(image, **kwargs)
+
+
+def read_values(arr, box):
+    """Reads values in box from arr. Values outside the array will be set to np.nan"""
+    i, j, width, height = box
+    mini, minj, widthi, widthj = clip_box(arr, box)
+    di = mini - i
+    dj = minj - j
+
+    shape = list(arr.shape)
+    shape[-2] = width
+    shape[-1] = height
+
+    result = np.full(shape, np.nan)
+    result[..., di : di + widthi, dj : dj + widthj] = arr[
+        ..., mini : mini + widthi, minj:widthj
+    ]
+    return result
+
+
+def clip_box(arr, box):
+    """Clips the box values according to the array dimensions"""
+    i, j, width, height = box
+    mini = min(arr.shape[-2], max(0, i))
+    minj = min(arr.shape[-1], max(0, j))
+    maxi = max(0, min(arr.shape[-2], i + width))
+    maxj = max(0, min(arr.shape[-1], j + height))
+    return [mini, minj, maxi - mini, maxj - minj]

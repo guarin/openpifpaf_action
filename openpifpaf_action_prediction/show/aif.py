@@ -53,8 +53,8 @@ class AifPainter:
         # yellow = ground truth without corresponding prediction
         # blue = prediction without corresponding ground truth
 
-        center = pred.center if pred is not None else truth.centers
-        center = np.array(center) * self.xy_scale
+        centers = pred.centers if pred is not None else truth.centers
+        centers = np.array(centers) * self.xy_scale
         bbox = pred.bbox if pred is not None else truth.bbox
         bbox = np.array(bbox) * self.xy_scale
         kp_ann = pred.keypoint_ann if pred is not None else truth.keypoint_ann
@@ -84,12 +84,13 @@ class AifPainter:
             score_texts = [""] * len(action_texts)
             colors = ["yellow"] * len(action_texts)
 
-        x, y = center
+        xs = centers[:, 0]
+        ys = centers[:, 1]
 
         for i, score, action, face_color in zip(
             range(len(score_texts)), score_texts, action_texts, colors
         ):
-            ax.scatter([x], [y], color=color)
+            ax.scatter(xs, ys, color=color)
             utils.plot_bbox(ax, bbox, color=color)
             # if color in ["green"]:
             self.kp_painter.annotation(ax, kp_ann, color=color)
@@ -97,7 +98,7 @@ class AifPainter:
             if color in ["green", "yellow", "red"]:
                 ax.annotate(
                     f"{score}{action}",
-                    (x, y),
+                    (xs[0], ys[0]),
                     fontsize=8,
                     xytext=(5.0, 5.0 + (len(score_texts) - 1 - i) * 15.0),
                     textcoords="offset points",

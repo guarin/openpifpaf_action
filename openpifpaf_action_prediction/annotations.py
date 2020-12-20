@@ -11,6 +11,7 @@ class AifCenter(openpifpaf.annotation.Base):
         true_actions,
         all_actions,
         action_probabilities,
+        action_probability_fields=None,
         image_width=None,
         image_height=None,
     ):
@@ -19,6 +20,7 @@ class AifCenter(openpifpaf.annotation.Base):
         self.true_actions = true_actions
         self.all_actions = all_actions
         self.action_probabilities = action_probabilities
+        self.action_probability_fields = action_probability_fields
         self.image_width = image_width
         self.image_height = image_height
 
@@ -36,7 +38,9 @@ class AifCenter(openpifpaf.annotation.Base):
             "centers": self.centers,
             "all_actions": self.all_actions,
             "action_probabilities": self.action_probabilities,
+            "action_probabilitiy_fields": self.action_probability_fields,
             "image_width": self.image_width,
             "image_heigth": self.image_height,
+            "keypoint_data": self.keypoint_ann.json_data(),
         }
         return data

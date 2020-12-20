@@ -14,12 +14,26 @@ from . import headmeta
 from . import match
 from . import utils
 
-# openpifpaf.network.factory module is overwritten in openpifpaf.network.__init__
-# need to import it manually
-network_factory = importlib.import_module("openpifpaf.network.factory")
-decoder_factory = importlib.import_module("openpifpaf.decoder.factory")
-
 keypoint_annotations_inverse = openpifpaf.transforms.Preprocess.annotations_inverse
+
+
+# overwrite pifpaf encoder configuration
+openpifapf_encoder_cli = openpifpaf.encoder.cli
+openpifpaf_encoder_configure = openpifpaf.encoder.configure
+
+
+def encoder_cli(parser):
+    openpifapf_encoder_cli(parser)
+    encoder.aif.cli(parser)
+
+
+def encoder_configure(args):
+    openpifpaf_encoder_configure(args)
+    encoder.aif.configure(args)
+
+
+openpifpaf.encoder.cli = encoder_cli
+openpifpaf.encoder.configure = encoder_configure
 
 
 class DummyPainter:
@@ -49,10 +63,10 @@ def annotations_inverse(anns, meta):
 def register():
     openpifpaf.DATAMODULES["voc2012"] = datasets.voc2012.PascalVOC2012
     openpifpaf.DATAMODULES["stanford40"] = datasets.stanford40.Stanford40
-    network_factory.HEAD_FACTORIES[
+    openpifpaf.network.HEAD_FACTORIES[
         headmeta.AifCenter
     ] = openpifpaf.network.heads.DeepCompositeField3
-    decoder_factory.DECODERS.add(decoder.aif.AifCenter)
+    openpifpaf.decoder.DECODERS.add(decoder.aif.AifCenter)
     openpifpaf.show.annotation_painter.PAINTERS["AifCenter"] = show.aif.AifPainter
     openpifpaf.show.annotation_painter.PAINTERS["Annotation"] = DummyPainter
     # annotations_inverse = openpifpaf.transforms.Preprocess.annotations_inverse
