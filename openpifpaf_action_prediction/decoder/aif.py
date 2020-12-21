@@ -20,7 +20,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     use_encoder_side_length = True
     side_length = 0.1
-    save_radius = 4
+    save_radius = -1
     strategy = "max"
 
     def __init__(self, head_metas):
@@ -98,11 +98,12 @@ class AifCenter(openpifpaf.decoder.Decoder):
                 box = [j, i, side_length, side_length]
                 probabilities.append(utils.read_values(probability_fields, box))
 
-                si, sj = int_save_center
-                save_box = [sj, si, save_side_length, save_side_length]
-                save_probability_fields.append(
-                    utils.read_values(probability_fields, save_box).tolist()
-                )
+                if self.save_radius >= 0:
+                    si, sj = int_save_center
+                    save_box = [sj, si, save_side_length, save_side_length]
+                    save_probability_fields.append(
+                        utils.read_values(probability_fields, save_box).tolist()
+                    )
 
             # remove empty arrays
             probabilities = [
