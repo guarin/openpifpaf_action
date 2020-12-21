@@ -139,7 +139,7 @@ def read_values(arr, box):
 
     result = np.full(shape, np.nan)
     result[..., di : di + widthi, dj : dj + widthj] = arr[
-        ..., mini : mini + widthi, minj:widthj
+        ..., mini : mini + widthi, minj : minj + widthj
     ]
     return result
 

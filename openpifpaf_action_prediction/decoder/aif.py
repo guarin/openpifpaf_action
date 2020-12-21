@@ -13,7 +13,7 @@ from openpifpaf.decoder import CifCaf
 
 LOG = logging.getLogger(__name__)
 
-STRATEGIES = ["max"]
+STRATEGIES = {"max"}
 
 
 class AifCenter(openpifpaf.decoder.Decoder):
@@ -111,7 +111,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
             if len(probabilities) > 0:
                 if self.strategy == "max":
-                    probabilities = np.array(probabilities).max(0).tolist()
+                    probabilities = np.array(probabilities).max((0, 2, 3)).tolist()
             else:
                 probabilities = [None] * probability_fields.shape[0]
 
