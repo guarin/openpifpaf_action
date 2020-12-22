@@ -112,7 +112,9 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
             if len(probabilities) > 0:
                 if self.strategy == "max":
-                    probabilities = np.array(probabilities).max((0, 2, 3)).tolist()
+                    probabilities = np.nanmax(
+                        np.array(probabilities), (0, 2, 3)
+                    ).tolist()
             else:
                 probabilities = [None] * probability_fields.shape[0]
 
