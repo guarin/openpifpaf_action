@@ -107,7 +107,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
             # remove empty arrays
             probabilities = [
-                p for p in probabilities if (p.size > 0) and (p != np.nan).any()
+                p for p in probabilities if (p.size > 0) and not np.isnan(p).all()
             ]
 
             if len(probabilities) > 0:
