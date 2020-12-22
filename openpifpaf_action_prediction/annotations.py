@@ -36,6 +36,7 @@ class AifCenter(openpifpaf.annotation.Base):
         data = {
             "bbox": self.bbox,
             "centers": self.centers,
+            "keypoint_indices": self.keypoint_indices,
             "all_actions": self.all_actions,
             "action_probabilities": self.action_probabilities,
             "action_probabilitiy_fields": self.action_probability_fields,
