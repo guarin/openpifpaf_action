@@ -34,7 +34,7 @@ class AifCenter:
 
 class AifCenterGenerator:
 
-    mask_background: bool = False
+    mask_background: bool = True
     mask_unannotated: bool = True
 
     def __init__(self, config: AifCenter):
