@@ -5,7 +5,9 @@ import glob
 from collections import defaultdict
 import matlab.engine
 import os
+import shutil
 import argparse
+import pandas as pd
 
 from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import match
@@ -63,6 +65,7 @@ def matcher_stats(matcher):
 def build_voc_data(matcher, eval_sets):
     voc_data = defaultdict(list)
     match_counts = defaultdict(lambda: 0)
+    matched_eval_sets = defaultdict(dict)
     for eval_ann, pred_ann, _ in matcher.inner_matches():
         for action, prob in zip(
             pred_ann["all_actions"], pred_ann["action_probabilities"]
@@ -71,35 +74,55 @@ def build_voc_data(matcher, eval_sets):
             object_id = str(eval_ann["object_id"] + 1)
             if (action in eval_sets) and ((name, object_id) in eval_sets[action]):
                 match_counts[action] += 1
-                if prob >= 0:
+                if (prob is not None) and (prob >= 0):
                     voc_data[action].append([name, object_id, str(prob)])
-    return voc_data, match_counts
+                    matched_eval_sets[action][(name, object_id)] = eval_sets[action][
+                        (name, object_id)
+                    ]
+    return voc_data, match_counts, matched_eval_sets
 
 
-def eval_all(output_dir, iou_threshold, set_dir, eval_anns_file, voc_devkit_dir):
+def write_eval_sets(eval_sets, temp_dir, set_name):
+    for action, values in eval_sets.items():
+        data = []
+        for (filename, object_id), label in values.items():
+            data.append([filename, object_id, str(label)])
+        np.savetxt(os.path.join(temp_dir, f"{action}_{set_name}.txt"), data, fmt="%s")
+
+
+def name_from_output_dir(output_dir):
+    parts = output_dir.split("/")
+    return parts[-1] if parts[-1] else parts[-2]
+
+
+def eval_all(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
     """Evaluates all results in an output directory"""
-    name = output_dir.split("/")[-1]
+    name = name_from_output_dir(output_dir)
+    threshold_str = "0" + str(int(iou_threshold * 10))
 
     results = {}
     for set_name in {"train", "val"}:
         prediction_dirs = glob.glob(
             os.path.join(output_dir, f"{set_name}_predictions*")
         )
-        for prediction_dir in prediction_dirs:
+        for prediction_dir in sorted(prediction_dirs):
             epoch = prediction_dir.split("_")[-1][-3:]
-            prediction_files = glob.glob(os.path.join(prediction_dir, "*.json"))
 
-            result = voc_eval(
+            print(f"Evaluating {name} {set_name} {epoch}")
+            result, matched_result = voc_eval(
                 iou_threshold=iou_threshold,
                 set_name=set_name,
-                files=prediction_files,
+                files=os.path.join(prediction_dir, "*.json"),
                 temp_dir=os.path.join(output_dir, "temp_voc_dir"),
                 set_dir=set_dir,
-                eval_anns_file=eval_anns_file,
+                eval_anns_file=os.path.join(
+                    anns_dir, f"{set_name}_{threshold_str}.json"
+                ),
                 voc_devkit_dir=voc_devkit_dir,
             )
 
-            results[(name, set_name, epoch)] = result
+            results[(name, set_name, epoch, "all")] = result
+            results[(name, set_name, epoch, "matched")] = matched_result
 
     return results
 
@@ -122,7 +145,7 @@ def voc_eval(
         file.split("/")[-1][: -(len(set_name) + 5)]: np.loadtxt(file, dtype=object)
         for file in glob.glob(set_files)
     }
-    eval_sets = {k: {tuple(x) for x in v[:, :2]} for k, v in eval_sets.items()}
+    eval_sets = {k: {tuple(x[:2]): x[2] for x in v} for k, v in eval_sets.items()}
     eval_counts = {k: len(v) for k, v in eval_sets.items()}
 
     # load eval annotations
@@ -142,7 +165,7 @@ def voc_eval(
 
     # write annotations for matlab
     os.makedirs(temp_dir, exist_ok=True)
-    voc_data, match_counts = build_voc_data(matcher, eval_sets)
+    voc_data, match_counts, matched_eval_sets = build_voc_data(matcher, eval_sets)
     for action, data in voc_data.items():
         np.savetxt(
             f"{temp_dir}/comp9_action_{set_name}_{action}.txt",
@@ -150,13 +173,30 @@ def voc_eval(
             fmt="%s",
         )
 
+    write_eval_sets(matched_eval_sets, temp_dir, set_name)
+
     # get results
-    clsimgsetpath = set_dir + "/%s_%s.txt"
+    voc_devkit_dir = os.path.abspath(voc_devkit_dir)
+    resdir = os.path.abspath(temp_dir)
+    clsimgsetpath = os.path.join(os.path.abspath(set_dir), "%s_%s.txt")
+
     results = matlab_voc_eval(
-        voc_devkit_dir, testset=set_name, resdir=temp_dir, clsimgsetpath=clsimgsetpath
+        voc_devkit_dir=voc_devkit_dir,
+        testset=set_name,
+        resdir=resdir,
+        clsimgsetpath=clsimgsetpath,
     )
 
-    return list(results[0])
+    clsimgsetpath = os.path.join(os.path.abspath(temp_dir), "%s_%s.txt")
+    matched_results = matlab_voc_eval(
+        voc_devkit_dir=voc_devkit_dir,
+        testset=set_name,
+        resdir=resdir,
+        clsimgsetpath=clsimgsetpath,
+    )
+
+    shutil.rmtree(temp_dir)
+    return results, matched_results
 
 
 _matlab_engine = None
@@ -165,7 +205,7 @@ _matlab_engine = None
 def matlab_voc_eval(voc_devkit_dir, testset, resdir, clsimgsetpath):
     """Runs matlab evaluation code"""
     global _matlab_engine
-    if _matlab_engine is not None:
+    if _matlab_engine is None:
         _matlab_engine = matlab.engine.start_matlab()
 
     _matlab_engine.cd(voc_devkit_dir)
@@ -174,23 +214,34 @@ def matlab_voc_eval(voc_devkit_dir, testset, resdir, clsimgsetpath):
 
 
 parser = argparse.ArgumentParser("VOC Eval")
-parser.add_argument("--output-dir", type=str)
-parser.add_argument("--set-dir", type=str)
-parser.add_argument("--anns-file", type=str)
-parser.add_argument("--voc-devkit-dir", type=str)
+parser.add_argument("--output-dir", type=str, required=True)
+parser.add_argument("--set-dir", type=str, required=True)
+parser.add_argument("--anns-dir", type=str, required=True)
+parser.add_argument("--voc-devkit-dir", type=str, required=True)
 parser.add_argument("--iou-threshold", default=0.3, type=float)
 
 
-def main(output_dir, iou_threshold, set_dir, eval_anns_file, voc_devkit_dir):
+def main(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
     results = eval_all(
         output_dir=output_dir,
         iou_threshold=iou_threshold,
         set_dir=set_dir,
-        eval_anns_file=eval_anns_file,
+        anns_dir=anns_dir,
         voc_devkit_dir=voc_devkit_dir,
     )
 
-    print(results)
+    columns = ["name", "set", "epoch", "data", "mAP"]
+    columns.extend([action for action in voc2012.ACTIONS if action != "other"])
+    rows = []
+    for key, vals in results.items():
+        values = list(key)
+        values.extend(vals)
+        rows.append(values)
+    df = pd.DataFrame(rows, columns=columns)
+    df = df.sort_values(["name", "set", "epoch"])
+    df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
+    df.to_excel(os.path.join(output_dir, "voc_results.xls"), index=False)
+    print(df.to_string(index=False))
 
 
 if __name__ == "__main__":
@@ -199,6 +250,6 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         iou_threshold=args.iou_threshold,
         set_dir=args.set_dir,
-        eval_anns_file=args.anns_file,
+        anns_dir=args.anns_dir,
         voc_devkit_dir=args.voc_devkit_dir,
     )

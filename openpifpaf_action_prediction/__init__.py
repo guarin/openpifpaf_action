@@ -13,7 +13,6 @@ from . import annotations
 from . import headmeta
 from . import match
 from . import utils
-from . import voc_eval
 
 keypoint_annotations_inverse = openpifpaf.transforms.Preprocess.annotations_inverse
 
