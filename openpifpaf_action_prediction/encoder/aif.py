@@ -116,7 +116,6 @@ class AifCenterGenerator:
 
         # hide background
         if self.mask_background:
-            print("MASK BACKGROUND")
             mask[...] = True
 
         # unhide annotated regions
