@@ -34,8 +34,8 @@ class AifCenter:
 
 class AifCenterGenerator:
 
-    mask_background: bool = True
-    mask_unannotated: bool = True
+    mask_background = True
+    mask_unannotated = True
 
     def __init__(self, config: AifCenter):
         self.config = config
@@ -116,6 +116,7 @@ class AifCenterGenerator:
 
         # hide background
         if self.mask_background:
+            print("MASK BACKGROUND")
             mask[...] = True
 
         # unhide annotated regions
@@ -180,18 +181,18 @@ def cli(parser):
     group = parser.add_argument_group("AifCenter Encoder")
     group.add_argument("--aif-encoder-side-length", default=AifCenter.side_length)
     group.add_argument(
-        "--aif-encoder-mask-background",
-        default=AifCenterGenerator.mask_background,
-        type=bool,
+        "--aif-encoder-no-mask-background",
+        default=not AifCenterGenerator.mask_background,
+        action="store_true",
     )
     group.add_argument(
-        "--aif-encoder-mask-unannotated",
-        default=AifCenterGenerator.mask_unannotated,
-        type=bool,
+        "--aif-encoder-no-mask-unannotated",
+        default=not AifCenterGenerator.mask_unannotated,
+        action="store_true",
     )
 
 
 def configure(args):
     AifCenter.side_length = args.aif_encoder_side_length
-    AifCenterGenerator.mask_background = args.aif_encoder_mask_background
-    AifCenterGenerator.mask_unannotated = args.aif_encoder_mask_unannotated
+    AifCenterGenerator.mask_background = not args.aif_encoder_no_mask_background
+    AifCenterGenerator.mask_unannotated = not args.aif_encoder_no_mask_unannotated
