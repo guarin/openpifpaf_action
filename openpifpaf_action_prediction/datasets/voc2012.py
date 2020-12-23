@@ -312,7 +312,6 @@ class PascalVOC2012(DataModule):
         )
 
     def _preprocess(self):
-        # TODO: Transforms is not in __init__ of pifpaf
         if not self.augmentation:
             return self._preprocess_no_agumentation()
 
@@ -325,8 +324,8 @@ class PascalVOC2012(DataModule):
         else:
             rescale_t = openpifpaf.transforms.RescaleRelative(
                 scale_range=(0.8 * self.rescale_images, 2.0 * self.rescale_images),
-                power_law=True,
-                stretch_range=(0.75, 1.33),
+                power_law=False,
+                stretch_range=(0.9, 1.5),
             )
 
         return openpifpaf.transforms.Compose(
