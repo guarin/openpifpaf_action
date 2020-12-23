@@ -402,12 +402,12 @@ class PascalVOC2012(DataModule):
 
     def metrics(self):
         return [
-            openpifpaf.metric.Coco(
-                pycocotools.coco.COCO(openpifpaf.plugins.coco.CocoKp.val_annotations),
-                max_per_image=20,
-                category_ids=[1],
-                iou_type="keypoints",
-            )
+            # openpifpaf.metric.Coco(
+            #     pycocotools.coco.COCO(openpifpaf.plugins.coco.CocoKp.val_annotations),
+            #     max_per_image=20,
+            #     category_ids=[1],
+            #     iou_type="keypoints",
+            # )
         ]
 
 
