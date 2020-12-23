@@ -118,6 +118,23 @@ class AifCenterGenerator:
         if self.mask_background:
             mask[...] = True
 
+        # unhide annotated regions
+        for ann in action:
+            x, y, w, h = ann["bbox"]
+            x_min, y_min, x_max, y_max = (
+                np.array([x, y, x + w, y + h]) / self.config.meta.stride
+            )
+            bbox = np.array(
+                [
+                    np.floor(x_min),
+                    np.floor(y_min),
+                    np.ceil(x_max + 1),
+                    np.ceil(y_max + 1),
+                ]
+            ).astype(int)
+            i_min, j_min, i_max, j_max = bbox + self.config.padding
+            mask[j_min:j_max, i_min:i_max] = False
+
         # hide unannotated regions
         if self.mask_unannotated:
             for ann in no_action:
@@ -135,23 +152,6 @@ class AifCenterGenerator:
                 ).astype(int)
                 i_min, j_min, i_max, j_max = bbox + self.config.padding
                 mask[j_min:j_max, i_min:i_max] = True
-
-        # unhide annotated regions
-        for ann in action:
-            x, y, w, h = ann["bbox"]
-            x_min, y_min, x_max, y_max = (
-                np.array([x, y, x + w, y + h]) / self.config.meta.stride
-            )
-            bbox = np.array(
-                [
-                    np.floor(x_min),
-                    np.floor(y_min),
-                    np.ceil(x_max + 1),
-                    np.ceil(y_max + 1),
-                ]
-            ).astype(int)
-            i_min, j_min, i_max, j_max = bbox + self.config.padding
-            mask[j_min:j_max, i_min:i_max] = False
 
         self.intensities[:, mask] = np.nan
 
