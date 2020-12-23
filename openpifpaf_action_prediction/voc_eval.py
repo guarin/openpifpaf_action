@@ -213,12 +213,18 @@ def matlab_voc_eval(voc_devkit_dir, testset, resdir, clsimgsetpath):
     return list(results[0])
 
 
-parser = argparse.ArgumentParser("VOC Eval")
-parser.add_argument("--output-dir", type=str, required=True)
-parser.add_argument("--set-dir", type=str, required=True)
-parser.add_argument("--anns-dir", type=str, required=True)
-parser.add_argument("--voc-devkit-dir", type=str, required=True)
-parser.add_argument("--iou-threshold", default=0.3, type=float)
+def coco_eval(output_dir):
+    files = glob.glob(os.path.join(output_dir, "*.stats.json"))
+    name = name_from_output_dir(output_dir)
+    results = {}
+    for file in sorted(files):
+        parts = file.split("/")[-1].split("_")
+        set = "_".join(parts[1:-1])
+        epoch = parts[-1][-14:-11]
+        data = json.load(open(file))
+        print(data)
+        results[(name, set, epoch)] = data["stats"]
+    return results
 
 
 def main(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
@@ -240,8 +246,34 @@ def main(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
     df = pd.DataFrame(rows, columns=columns)
     df = df.sort_values(["name", "set", "epoch"])
     df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
-    df.to_excel(os.path.join(output_dir, "voc_results.xls"), index=False)
+
+    coco_results = coco_eval(output_dir)
+    coco_columns = ["name", "set", "epoch"]
+    coco_columns.extend(
+        ["AP", "AP0.5", "AP0.75", "APM", "APL", "AR", "AR0.5", "AR0.75", "ARM", "ARL"]
+    )
+    coco_rows = []
+    for key, vals in coco_results.items():
+        values = list(key)
+        values.extend(vals)
+        coco_rows.append(values)
+    coco_df = pd.DataFrame(coco_rows, columns=coco_columns)
+    coco_df.sort_values(["name", "set", "epoch"])
+
+    coco_df.to_csv(os.path.join(output_dir, "coco_results.csv"), index=False)
+
+    print("-- VOC --")
     print(df.to_string(index=False))
+    print("-- COCO --")
+    print(coco_df.to_string(index=False))
+
+
+parser = argparse.ArgumentParser("VOC Eval")
+parser.add_argument("--output-dir", type=str, required=True)
+parser.add_argument("--set-dir", type=str, required=True)
+parser.add_argument("--anns-dir", type=str, required=True)
+parser.add_argument("--voc-devkit-dir", type=str, required=True)
+parser.add_argument("--iou-threshold", default=0.3, type=float)
 
 
 if __name__ == "__main__":
