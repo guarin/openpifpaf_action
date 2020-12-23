@@ -324,7 +324,7 @@ class PascalVOC2012(DataModule):
             )
         else:
             rescale_t = openpifpaf.transforms.RescaleRelative(
-                scale_range=(0.4 * self.rescale_images, 2.0 * self.rescale_images),
+                scale_range=(0.8 * self.rescale_images, 2.0 * self.rescale_images),
                 power_law=True,
                 stretch_range=(0.75, 1.33),
             )
