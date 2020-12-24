@@ -26,6 +26,7 @@ class AifCenter:
     visualizer: CifVisualizer = None
 
     side_length: ClassVar[float] = 0.1
+    min_radius: ClassVar[int] = 0
     padding: ClassVar[int] = 10
 
     def __call__(self, image, anns, meta):
@@ -100,7 +101,9 @@ class AifCenterGenerator:
 
     def fill_center(self, center, action_mask, scale):
 
-        radius = int(np.round(max(0, scale * self.config.side_length)))
+        radius = int(
+            np.round(max(self.config.min_radius, scale * self.config.side_length))
+        )
         side_length = 2 * radius + 1
 
         i, j = np.round(center - radius).astype(np.int) + self.config.padding
@@ -189,9 +192,13 @@ def cli(parser):
         default=not AifCenterGenerator.mask_unannotated,
         action="store_true",
     )
+    group.add_argument(
+        "--aif-encoder-min-radius", default=AifCenter.min_radius, type=int
+    )
 
 
 def configure(args):
     AifCenter.side_length = args.aif_encoder_side_length
+    AifCenter.min_radius = args.aif_encoder_min_radius
     AifCenterGenerator.mask_background = not args.aif_encoder_no_mask_background
     AifCenterGenerator.mask_unannotated = not args.aif_encoder_no_mask_unannotated

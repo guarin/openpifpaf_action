@@ -80,7 +80,11 @@ class AifCenter(openpifpaf.decoder.Decoder):
             bbox = cifcaf_ann.bbox()
             area = utils.bbox_area(bbox)
             scale = np.sqrt(area) / meta.stride
-            radius = int(np.round(max(0, scale * self.side_length)))
+            radius = int(
+                np.round(
+                    max(encoder.aif.AifCenter.min_radius, scale * self.side_length)
+                )
+            )
             side_length = 2 * radius + 1
             save_side_length = 2 * self.save_radius + 1
 
