@@ -181,7 +181,9 @@ class AifCaf(openpifpaf.encoder.Caf):
 
 def cli(parser):
     group = parser.add_argument_group("AifCenter Encoder")
-    group.add_argument("--aif-encoder-side-length", default=AifCenter.side_length)
+    group.add_argument(
+        "--aif-encoder-side-length", default=AifCenter.side_length, type=float
+    )
     group.add_argument(
         "--aif-encoder-no-mask-background",
         default=not AifCenterGenerator.mask_background,
