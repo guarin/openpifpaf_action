@@ -18,8 +18,8 @@ STRATEGIES = {"max"}
 
 class AifCenter(openpifpaf.decoder.Decoder):
 
-    use_encoder_side_length = True
-    side_length = 0.1
+    side_length = None
+    min_radius = None
     save_radius = -1
     strategy = "max"
 
@@ -29,9 +29,16 @@ class AifCenter(openpifpaf.decoder.Decoder):
         self.cifcaf = None
         self.visualizer = visualizer.aif.Aif(head_metas[-1])
         self.visualizer.show_confidences = True
-
-        if self.use_encoder_side_length:
-            self.side_length = encoder.aif.AifCenter.side_length
+        self.side_length = (
+            self.side_length
+            if self.side_length is not None
+            else encoder.aif.AifCenter.side_length
+        )
+        self.min_radius = (
+            self.min_radius
+            if self.min_radius is not None
+            else encoder.aif.AifCenter.min_radius
+        )
 
     @classmethod
     def factory(cls, head_metas):
@@ -49,7 +56,12 @@ class AifCenter(openpifpaf.decoder.Decoder):
     @classmethod
     def cli(cls, parser):
         group = parser.add_argument_group("AifCenter Decoder")
-        group.add_argument("--aif-decoder-side-length", default=None, type=float)
+        group.add_argument(
+            "--aif-decoder-side-length", default=cls.side_length, type=float
+        )
+        group.add_argument(
+            "--aif-decoder-min-radius", default=cls.min_radius, type=float
+        )
         group.add_argument(
             "--aif-decoder-save-radius", default=cls.save_radius, type=int
         )
@@ -57,10 +69,8 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     @classmethod
     def configure(cls, args: argparse.Namespace):
-        if args.aif_decoder_side_length is not None:
-            cls.side_length = args.aif_decoder_side_length
-            cls.use_encoder_side_length = False
-
+        cls.side_length = args.aif_decoder_side_length
+        cls.min_radius = args.aif_decoder_min_radius
         cls.save_radius = args.aif_decoder_save_radius
         if args.aif_decoder_strategy not in STRATEGIES:
             LOG.error(
@@ -80,11 +90,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
             bbox = cifcaf_ann.bbox()
             area = utils.bbox_area(bbox)
             scale = np.sqrt(area) / meta.stride
-            radius = int(
-                np.round(
-                    max(encoder.aif.AifCenter.min_radius, scale * self.side_length)
-                )
-            )
+            radius = int(np.round(max(self.min_radius, scale * self.side_length)))
             side_length = 2 * radius + 1
             save_side_length = 2 * self.save_radius + 1
 
