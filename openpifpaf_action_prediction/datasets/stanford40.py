@@ -344,7 +344,7 @@ class Stanford40(DataModule):
                 openpifpaf.transforms.RandomApply(
                     openpifpaf.transforms.Blur(), self.blur
                 ),
-                transforms.crop.Crop(self.square_edge, use_area_of_interest=True),
+                openpifpaf.transforms.Crop(self.square_edge, use_area_of_interest=True),
                 openpifpaf.transforms.CenterPad(self.square_edge),
                 openpifpaf.transforms.RandomApply(
                     openpifpaf.transforms.RotateBy90(), self.orientation_invariant
