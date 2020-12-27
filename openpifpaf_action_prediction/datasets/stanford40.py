@@ -107,6 +107,7 @@ class Stanford40(DataModule):
     max_actions = len(ACTIONS)
     required_keypoints = ["left_hip", "right_hip"]
     keypoints = [["left_hip", "right_hip"]]
+    final_layer = "sigmoid"
 
     def __init__(self):
         super().__init__()
@@ -147,6 +148,7 @@ class Stanford40(DataModule):
             actions=self.actions,
             pose=COCO_UPRIGHT_POSE,
             center_keypoints=self.keypoints,
+            final_layer=self.final_layer,
         )
 
         cif.upsample_stride = self.upsample_stride
@@ -242,6 +244,7 @@ class Stanford40(DataModule):
         group.add_argument(
             "--stanford-required-keypoints", default=cls.required_keypoints, nargs="+"
         )
+        group.add_argument("--stanford-final-layer", default=cls.final_layer, type=str)
 
     @classmethod
     def configure(cls, args: argparse.Namespace):
@@ -271,6 +274,7 @@ class Stanford40(DataModule):
             args.stanford_keypoints if args.stanford_keypoints else cls.keypoints
         )
         cls.required_keypoints = args.stanford_required_keypoints
+        cls.final_layer = args.stanford_final_layer
 
     def _encoders(self):
         return [

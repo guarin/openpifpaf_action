@@ -17,6 +17,8 @@ class AifCenter(Base):
 
     vector_offsets = []
 
+    final_layer: str = "sigmoid"
+
     _action_dict = None
 
     @property
