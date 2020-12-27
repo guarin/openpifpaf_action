@@ -331,7 +331,7 @@ class Stanford40(DataModule):
             rescale_t = openpifpaf.transforms.RescaleRelative(
                 scale_range=(0.8 * self.rescale_images, 2.0 * self.rescale_images),
                 power_law=True,
-                stretch_range=(0.75, 1.33),
+                stretch_range=(0.9, 1.5),
             )
 
         return openpifpaf.transforms.Compose(
@@ -403,7 +403,7 @@ class Stanford40(DataModule):
         )
 
     def metrics(self):
-        return [metrics.pascal_voc_2012.PascalVOC2012(self.actions)]
+        return []
 
 
 class _Stanford40(torch.utils.data.Dataset):

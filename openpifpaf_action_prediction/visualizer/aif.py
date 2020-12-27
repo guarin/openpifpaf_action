@@ -54,7 +54,7 @@ class Aif(Base):
             ) as ax:
                 ax.annotate(f"{self.meta.actions[f]}  {title}", (0, 0))
                 im = ax.imshow(
-                    self.scale_scalar(confidences[f], self.meta.stride),
+                    self.scale_scalar(confidences.sum(0), self.meta.stride),
                     alpha=0.9,
                     vmin=0.0,
                     vmax=1.0,
