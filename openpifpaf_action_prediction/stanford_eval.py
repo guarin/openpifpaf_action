@@ -70,13 +70,13 @@ def name_from_output_dir(output_dir):
     return parts[-1] if parts[-1] else parts[-2]
 
 
-def eval_all(output_dir, iou_threshold, anns_dir):
+def eval_all(output_dir, iou_threshold, anns_dir, actions):
     """Evaluates all results in an output directory"""
     name = name_from_output_dir(output_dir)
     threshold_str = "0" + str(int(iou_threshold * 10))
 
     results = {}
-    for set_name in ["val"]:
+    for set_name in ["train", "val"]:
         prediction_dirs = glob.glob(
             os.path.join(output_dir, f"{set_name}_predictions*")
         )
@@ -90,6 +90,7 @@ def eval_all(output_dir, iou_threshold, anns_dir):
                 eval_anns_file=os.path.join(
                     anns_dir, f"{set_name}_{threshold_str}.json"
                 ),
+                actions=actions,
             )
 
             results[(name, set_name, epoch, "all")] = result
@@ -98,11 +99,7 @@ def eval_all(output_dir, iou_threshold, anns_dir):
     return results
 
 
-def stanford_eval(
-    iou_threshold,
-    files,
-    eval_anns_file,
-):
+def stanford_eval(iou_threshold, files, eval_anns_file, actions):
     # load predictions
     pred_anns = dict(load_json(file) for file in glob.glob(files))
 
@@ -128,7 +125,7 @@ def stanford_eval(
     predictions = defaultdict(list)
     matched_predictions = defaultdict(list)
     for eval_ann, pred_ann, _ in matcher.left_matches():
-        for i, action in enumerate(stanford40.ACTIONS):
+        for i, action in enumerate(actions):
             target = 1.0 if action in eval_ann["actions"] else 0.0
             if pred_ann is None:
                 predictions[action].append((target, 0.0))
@@ -173,15 +170,16 @@ def coco_eval(output_dir):
     return results
 
 
-def main(output_dir, iou_threshold, anns_dir):
+def main(output_dir, iou_threshold, anns_dir, actions):
     results = eval_all(
         output_dir=output_dir,
         iou_threshold=iou_threshold,
         anns_dir=anns_dir,
+        actions=actions,
     )
 
     columns = ["name", "set", "epoch", "data", "mAP"]
-    columns.extend([action for action in stanford40.ACTIONS])
+    columns.extend(actions)
     rows = []
     for key, vals in results.items():
         values = list(key)
@@ -216,12 +214,15 @@ parser = argparse.ArgumentParser("Stanford Eval")
 parser.add_argument("--output-dir", type=str, required=True)
 parser.add_argument("--anns-dir", type=str, required=True)
 parser.add_argument("--iou-threshold", default=0.3, type=float)
+parser.add_argument("--actions", default=[], nargs="+")
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    actions = args.actions if args.actions else stanford40.ACTIONS
     main(
         output_dir=args.output_dir,
         iou_threshold=args.iou_threshold,
         anns_dir=args.anns_dir,
+        actions=actions,
     )

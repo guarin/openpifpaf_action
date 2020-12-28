@@ -8,7 +8,9 @@ import os
 import shutil
 import argparse
 import pandas as pd
+import matplotlib
 
+from openpifpaf.plugins.coco.constants import COCO_KEYPOINTS
 from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import match
 from openpifpaf_action_prediction.datasets import voc2012
@@ -19,6 +21,7 @@ def load_json(file):
     anns = json.load(open(file))
     filename = file.split("/")[-1][:-17]
     anns = [a for a in anns if "action_probabilities" in a]
+    anns = list(sorted(anns, key=lambda a: a["keypoint_data"]["score"], reverse=True))
     return filename, anns
 
 
@@ -31,6 +34,40 @@ def score_fun(ann, kp_ann):
     # only match on area inside image
     kp_ann_bbox = utils.bbox_clamp(kp_ann_bbox, width, height)
     return utils.iou(ann_bbox, kp_ann_bbox)
+
+
+_coco_dict = utils.index_dict(COCO_KEYPOINTS)
+_torso_indices = [
+    _coco_dict[name]
+    for name in [
+        "left_shoulder",
+        "left_hip",
+        "right_hip",
+        "right_shoulder",
+        "left_shoulder",
+    ]
+]
+
+
+def point_score_fun(ann, kp_ann):
+    """Matches annotations based on minimum keypoint distance to a reference point on the human"""
+    point = np.array(ann["point"])
+    keypoints = np.array(kp_ann["keypoint_data"]["keypoints"]).reshape(-1, 3)
+    keypoint_score = kp_ann["keypoint_data"]["score"]
+    global _torso_indices
+    if np.all(keypoints[_torso_indices, 2] > 0):
+        torso_keypoints = keypoints[_torso_indices, :2]
+        torso = matplotlib.path.Path(torso_keypoints)
+        if torso.contains_point(point):
+            return (1e10, keypoint_score)
+    xy = keypoints[keypoints[:, 2] > 0, :2]
+    distance = np.sqrt(np.sum((xy - point) ** 2, axis=1))
+    if len(distance) > 0:
+        distance /= max(10, np.sqrt(utils.bbox_area(kp_ann["bbox"])))
+        inv_distance = 1 / min(distance)
+        return (inv_distance, keypoint_score)
+    else:
+        return (0, keypoint_score)
 
 
 def matcher_stats(matcher):
@@ -95,29 +132,36 @@ def name_from_output_dir(output_dir):
     return parts[-1] if parts[-1] else parts[-2]
 
 
-def eval_all(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
+def eval_all(output_dir, method, threshold, set_dir, anns_dir, voc_devkit_dir):
     """Evaluates all results in an output directory"""
     name = name_from_output_dir(output_dir)
-    threshold_str = "0" + str(int(iou_threshold * 10))
+    threshold_str = (
+        "0" + str(int(threshold * 10)) if method == "bbox" else "0" + str(threshold[0])
+    )
 
     results = {}
     for set_name in {"train", "val"}:
         prediction_dirs = glob.glob(
             os.path.join(output_dir, f"{set_name}_predictions*")
         )
+
+        anns_file = f"{set_name}_{threshold_str}.json"
+        if method == "point":
+            anns_file = "point_" + anns_file
+        eval_anns_file = os.path.join(anns_dir, anns_file)
+
         for prediction_dir in sorted(prediction_dirs):
             epoch = prediction_dir.split("_")[-1][-3:]
 
             print(f"Evaluating {name} {set_name} {epoch}")
             result, matched_result = voc_eval(
-                iou_threshold=iou_threshold,
+                method=method,
+                threshold=threshold,
                 set_name=set_name,
                 files=os.path.join(prediction_dir, "*.json"),
                 temp_dir=os.path.join(output_dir, "temp_voc_dir"),
                 set_dir=set_dir,
-                eval_anns_file=os.path.join(
-                    anns_dir, f"{set_name}_{threshold_str}.json"
-                ),
+                eval_anns_file=eval_anns_file,
                 voc_devkit_dir=voc_devkit_dir,
             )
 
@@ -127,8 +171,15 @@ def eval_all(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
     return results
 
 
+def print_stats(stats, title):
+    print(f"-- {title} --")
+    for title, stat in stats.items():
+        print(f"{title:<31} {stat:>5}")
+
+
 def voc_eval(
-    iou_threshold,
+    method,
+    threshold,
     set_name,
     files,
     temp_dir,
@@ -159,16 +210,19 @@ def voc_eval(
     eval_anns = dict(sorted(eval_anns.items()))
 
     # match annotations
-    matcher = match.ListMatcher(score_fun)
-    matcher.match(eval_anns.values(), pred_anns.values(), threshold=iou_threshold)
+    matcher = match.ListMatcher(point_score_fun if method == "point" else score_fun)
+    matcher.match(eval_anns.values(), pred_anns.values(), threshold=threshold)
     stats = matcher_stats(matcher)
 
+    print_stats(stats, f"{set_name}")
+
     # write annotations for matlab
+    competition = "comp11" if method == "point" else "comp9"
     os.makedirs(temp_dir, exist_ok=True)
     voc_data, match_counts, matched_eval_sets = build_voc_data(matcher, eval_sets)
     for action, data in voc_data.items():
         np.savetxt(
-            f"{temp_dir}/comp9_action_{set_name}_{action}.txt",
+            f"{temp_dir}/{competition}_action_{set_name}_{action}.txt",
             np.array(data, dtype=str),
             fmt="%s",
         )
@@ -185,6 +239,7 @@ def voc_eval(
         testset=set_name,
         resdir=resdir,
         clsimgsetpath=clsimgsetpath,
+        competition=competition,
     )
 
     clsimgsetpath = os.path.join(os.path.abspath(temp_dir), "%s_%s.txt")
@@ -193,6 +248,7 @@ def voc_eval(
         testset=set_name,
         resdir=resdir,
         clsimgsetpath=clsimgsetpath,
+        competition=competition,
     )
 
     shutil.rmtree(temp_dir)
@@ -202,14 +258,16 @@ def voc_eval(
 _matlab_engine = None
 
 
-def matlab_voc_eval(voc_devkit_dir, testset, resdir, clsimgsetpath):
+def matlab_voc_eval(voc_devkit_dir, testset, resdir, clsimgsetpath, competition):
     """Runs matlab evaluation code"""
     global _matlab_engine
     if _matlab_engine is None:
         _matlab_engine = matlab.engine.start_matlab()
 
     _matlab_engine.cd(voc_devkit_dir)
-    results = _matlab_engine.action_eval_fun(testset, resdir, clsimgsetpath)
+    results = _matlab_engine.action_eval_fun(
+        testset, resdir, clsimgsetpath, competition
+    )
     return list(results[0])
 
 
@@ -227,10 +285,18 @@ def coco_eval(output_dir):
     return results
 
 
-def main(output_dir, iou_threshold, set_dir, anns_dir, voc_devkit_dir):
+def main(
+    output_dir,
+    method,
+    threshold,
+    set_dir,
+    anns_dir,
+    voc_devkit_dir,
+):
     results = eval_all(
         output_dir=output_dir,
-        iou_threshold=iou_threshold,
+        method=method,
+        threshold=threshold,
         set_dir=set_dir,
         anns_dir=anns_dir,
         voc_devkit_dir=voc_devkit_dir,
@@ -273,14 +339,22 @@ parser.add_argument("--output-dir", type=str, required=True)
 parser.add_argument("--set-dir", type=str, required=True)
 parser.add_argument("--anns-dir", type=str, required=True)
 parser.add_argument("--voc-devkit-dir", type=str, required=True)
+parser.add_argument("--method", default="bbox", type=str)
 parser.add_argument("--iou-threshold", default=0.3, type=float)
+parser.add_argument("--point-threshold", default=2, type=float)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    if args.method not in {"bbox", "point"}:
+        raise ValueError(f"Unknown method: {args.method}")
+    threshold = (
+        args.iou_threshold if args.method == "bbox" else (args.point_threshold, 0.01)
+    )
     main(
         output_dir=args.output_dir,
-        iou_threshold=args.iou_threshold,
+        method=args.method,
+        threshold=threshold,
         set_dir=args.set_dir,
         anns_dir=args.anns_dir,
         voc_devkit_dir=args.voc_devkit_dir,
