@@ -7,6 +7,8 @@ import shutil
 import argparse
 import pandas as pd
 from sklearn.metrics import average_precision_score
+from xml.etree import ElementTree
+
 
 from openpifpaf_action_prediction import utils
 from openpifpaf_action_prediction import match
@@ -20,7 +22,9 @@ def load_json(file):
     anns = [
         a
         for a in anns
-        if "action_probabilities" in a and all(a["action_probabilities"])
+        if ("action_probabilities" in a)
+        and (a["keypoint_data"]["score"] > 0.01)
+        and (any(a["action_probabilities"]))
     ]
     return filename, anns
 
@@ -30,6 +34,13 @@ def score_fun(ann, kp_ann):
     width = ann["width"]
     height = ann["height"]
     kp_ann_bbox = kp_ann["bbox"]
+
+    # ignore instances that are much bigger than the image
+    image_area = ann["width"] * ann["height"]
+    bbox_area = utils.bbox_area(kp_ann_bbox)
+    if bbox_area > 4 * image_area:
+        return 0
+
     # force pose can generate bounding boxes outside the image
     # only match on area inside image
     kp_ann_bbox = utils.bbox_clamp(kp_ann_bbox, width, height)
@@ -70,16 +81,59 @@ def name_from_output_dir(output_dir):
     return parts[-1] if parts[-1] else parts[-2]
 
 
-def eval_all(output_dir, iou_threshold, anns_dir, actions):
+def load_eval_anns(anns_dir):
+    all_ann_files = glob.glob(os.path.join(anns_dir, "*.xml"))
+    xml_anns = [ElementTree.parse(file) for file in all_ann_files]
+    anns = defaultdict(list)
+    for ann in xml_anns:
+        filename = ann.find("filename").text
+        size = ann.find("size")
+        width = int(size.find("width").text)
+        height = int(size.find("height").text)
+        objects = ann.findall("object")
+        for i, o in enumerate(objects):
+            action = o.find("action").text.lower()
+            bbox = o.find("bndbox")
+            xmax = float(bbox.find("xmax").text)
+            xmin = float(bbox.find("xmin").text)
+            ymax = float(bbox.find("ymax").text)
+            ymin = float(bbox.find("ymin").text)
+            anns[filename].append(
+                {
+                    "filename": filename,
+                    "actions": [action],
+                    "bbox": [xmin, ymin, xmax - xmin, ymax - ymin],
+                    "width": width,
+                    "height": height,
+                    "object_id": i,
+                }
+            )
+    return anns
+
+
+def eval_all(output_dir, iou_threshold, set_dir, anns_dir, actions):
     """Evaluates all results in an output directory"""
     name = name_from_output_dir(output_dir)
     threshold_str = "0" + str(int(iou_threshold * 10))
+
+    all_anns = load_eval_anns(anns_dir)
 
     results = {}
     for set_name in ["train", "val"]:
         prediction_dirs = glob.glob(
             os.path.join(output_dir, f"{set_name}_predictions*")
         )
+
+        ids = {
+            f[:-4]
+            for f in np.loadtxt(os.path.join(set_dir, f"{set_name}.txt"), dtype=str)
+        }
+        eval_anns = {
+            file[:-4]: anns for file, anns in all_anns.items() if file[:-4] in ids
+        }
+
+        print("Eval anns", len(eval_anns))
+
         for prediction_dir in sorted(prediction_dirs):
             epoch = prediction_dir.split("_")[-1][-3:]
 
@@ -87,9 +141,7 @@ def eval_all(output_dir, iou_threshold, anns_dir, actions):
             result, matched_result = stanford_eval(
                 iou_threshold=iou_threshold,
                 files=os.path.join(prediction_dir, "*.json"),
-                eval_anns_file=os.path.join(
-                    anns_dir, f"{set_name}_{threshold_str}.json"
-                ),
+                eval_anns=eval_anns,
                 actions=actions,
             )
 
@@ -99,22 +151,19 @@ def eval_all(output_dir, iou_threshold, anns_dir, actions):
     return results
 
 
-def stanford_eval(iou_threshold, files, eval_anns_file, actions):
+def stanford_eval(iou_threshold, files, eval_anns, actions):
     # load predictions
     pred_anns = dict(load_json(file) for file in glob.glob(files))
 
     # load eval annotations
-    eval_anns = defaultdict(list)
-    for ann in json.load(open(eval_anns_file)):
-        if "object_id" in ann:
-            eval_anns[ann["filename"]].append(ann)
+    # eval_anns = defaultdict(list)
+    # for ann in json.load(open(eval_anns_file)):
+    #    if "object_id" in ann:
+    #        eval_anns[ann["filename"]].append(ann)
 
     # sort annotations by filename
     pred_anns = dict(sorted(pred_anns.items()))
     eval_anns = dict(sorted(eval_anns.items()))
-
-    print(len(pred_anns))
-    print(len(eval_anns))
 
     # match annotations
     matcher = match.ListMatcher(score_fun)
@@ -148,7 +197,6 @@ def calculate_aps(predictions):
         score_array = np.array(scores)
         y_true = score_array[:, 0]
         y_pred = score_array[:, 1]
-        print("Target ", min(y_true), max(y_true))
         print("Prediction ", min(y_pred), max(y_pred))
         aps[action] = average_precision_score(y_true, y_pred)
     map = sum(aps.values()) / len(aps)
@@ -170,12 +218,13 @@ def coco_eval(output_dir):
     return results
 
 
-def main(output_dir, iou_threshold, anns_dir, actions):
+def main(output_dir, iou_threshold, anns_dir, actions, set_dir):
     results = eval_all(
         output_dir=output_dir,
         iou_threshold=iou_threshold,
         anns_dir=anns_dir,
         actions=actions,
+        set_dir=set_dir,
     )
 
     columns = ["name", "set", "epoch", "data", "mAP"]
@@ -212,6 +261,7 @@ def main(output_dir, iou_threshold, anns_dir, actions):
 
 parser = argparse.ArgumentParser("Stanford Eval")
 parser.add_argument("--output-dir", type=str, required=True)
+parser.add_argument("--set-dir", type=str, required=True)
 parser.add_argument("--anns-dir", type=str, required=True)
 parser.add_argument("--iou-threshold", default=0.3, type=float)
 parser.add_argument("--actions", default=[], nargs="+")
@@ -225,4 +275,5 @@ if __name__ == "__main__":
         iou_threshold=args.iou_threshold,
         anns_dir=args.anns_dir,
         actions=actions,
+        set_dir=args.set_dir,
     )
