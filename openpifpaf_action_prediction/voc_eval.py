@@ -390,7 +390,7 @@ def main(
         rows.append(values)
     df = pd.DataFrame(rows, columns=columns)
     df = df.sort_values(["name", "set", "epoch"])
-    # df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
+    df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
 
     coco_results = coco_eval(output_dir)
     coco_columns = ["name", "set", "epoch"]
