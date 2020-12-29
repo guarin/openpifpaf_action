@@ -267,7 +267,7 @@ class Stanford40(DataModule):
         cls.min_kp_anns = args.stanford_min_kp_anns
         cls.bmin = args.stanford_bmin
 
-        cls.actions = args.stanford_actions
+        cls.actions = list(sorted(args.stanford_actions))
         cls.min_actions = args.stanford_min_actions
         cls.max_actions = args.stanford_max_actions
         cls.keypoints = (
