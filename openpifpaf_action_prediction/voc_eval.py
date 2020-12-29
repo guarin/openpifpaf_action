@@ -20,7 +20,13 @@ def load_json(file):
     """Loads an annotation file and filters for action annotations"""
     anns = json.load(open(file))
     filename = file.split("/")[-1][:-17]
-    anns = [a for a in anns if "action_probabilities" in a]
+    anns = [
+        a
+        for a in anns
+        if ("action_probabilities" in a)
+        and (a["keypoint_data"]["score"] > 0.01)
+        and (any(a["action_probabilities"]))
+    ]
     anns = list(sorted(anns, key=lambda a: a["keypoint_data"]["score"], reverse=True))
     return filename, anns
 
@@ -30,6 +36,13 @@ def score_fun(ann, kp_ann):
     width = ann["width"]
     height = ann["height"]
     kp_ann_bbox = kp_ann["bbox"]
+
+    # ignore instances that are much bigger than the image
+    image_area = ann["width"] * ann["height"]
+    bbox_area = utils.bbox_area(kp_ann_bbox)
+    if bbox_area > 4 * image_area:
+        return 0
+
     # force pose can generate bounding boxes outside the image
     # only match on area inside image
     kp_ann_bbox = utils.bbox_clamp(kp_ann_bbox, width, height)
@@ -51,23 +64,53 @@ _torso_indices = [
 
 def point_score_fun(ann, kp_ann):
     """Matches annotations based on minimum keypoint distance to a reference point on the human"""
+
+    # ignore instances that are much bigger than the image
+    image_area = ann["width"] * ann["height"]
+    bbox_area = utils.bbox_area(kp_ann["bbox"])
+    if bbox_area > 4 * image_area:
+        return (0, 0)
+
+    # ignore instances where the point is outside the bbox
     point = np.array(ann["point"])
+    px, py = point
+    x, y, w, h = kp_ann["bbox"]
+    if (px < x) or (px > x + w) or (py < y) or (py >= y + h):
+        return (0, 0)
+
     keypoints = np.array(kp_ann["keypoint_data"]["keypoints"]).reshape(-1, 3)
     keypoint_score = kp_ann["keypoint_data"]["score"]
-    global _torso_indices
-    if np.all(keypoints[_torso_indices, 2] > 0):
-        torso_keypoints = keypoints[_torso_indices, :2]
-        torso = matplotlib.path.Path(torso_keypoints)
-        if torso.contains_point(point):
-            return (1e10, keypoint_score)
     xy = keypoints[keypoints[:, 2] > 0, :2]
     distance = np.sqrt(np.sum((xy - point) ** 2, axis=1))
     if len(distance) > 0:
-        distance /= max(10, np.sqrt(utils.bbox_area(kp_ann["bbox"])))
+        # normalize distance by bbox size
+        distance /= min(200, max(10, np.sqrt(bbox_area)))
         inv_distance = 1 / min(distance)
-        return (inv_distance, keypoint_score)
     else:
-        return (0, keypoint_score)
+        inv_distance = 0
+
+    result = None
+
+    # no point to match
+    if inv_distance == 0:
+        result = (0, 0)
+
+    # check if point is on torso
+    global _torso_indices
+    if (inv_distance > 2) and np.all(keypoints[_torso_indices, 2] > 0):
+        torso_keypoints = keypoints[_torso_indices, :2]
+        torso = matplotlib.path.Path(torso_keypoints)
+        if torso.contains_point(point) and (keypoint_score > 0.05):
+            # if there are multiple instances that have the point on the torso then we want to match
+            # the one with the highest keypoint score
+            # if there are two instances with same score then match the one with the smallest distance
+            result = (1e10 * keypoint_score, inv_distance)
+
+    # default case
+    if result is None:
+        result = (inv_distance, keypoint_score)
+
+    return result
 
 
 def matcher_stats(matcher):
@@ -132,6 +175,46 @@ def name_from_output_dir(output_dir):
     return parts[-1] if parts[-1] else parts[-2]
 
 
+def load_eval_anns(anns_dir):
+    all_ann_files = glob.glob(os.path.join(anns_dir, "*.xml"))
+    xml_anns = [ElementTree.parse(file) for file in all_ann_files]
+    anns = defaultdict(list)
+    for ann in xml_anns:
+        filename = ann.find("filename").text
+        objects = ann.findall("object")
+        size = ann.find("size")
+        width = int(size.find("width").text)
+        height = int(size.find("height").text)
+        for object_id, o in enumerate(objects):
+            actions = o.find("actions")
+            if actions:
+                actions = [(a.tag, int(a.text)) for a in actions]
+                actions = list(sorted(actions, key=lambda x: x[0]))
+                bbox = o.find("bndbox")
+                xmax = float(bbox.find("xmax").text)
+                xmin = float(bbox.find("xmin").text)
+                ymax = float(bbox.find("ymax").text)
+                ymin = float(bbox.find("ymin").text)
+                difficult = o.find("difficult").text
+                point = o.find("point")
+                x = float(point.find("x").text)
+                y = float(point.find("y").text)
+                anns[filename].append(
+                    {
+                        "filename": filename,
+                        "actions": [a[0] for a in actions if a[1] == 1],
+                        "action_labels": [a[1] for a in actions],
+                        "bbox": [xmin, ymin, xmax - xmin, ymax - ymin],
+                        "difficult": difficult,
+                        "object_id": object_id,
+                        "width": width,
+                        "height": height,
+                        "point": [x, y],
+                    }
+                )
+    return anns
+
+
 def eval_all(output_dir, method, threshold, set_dir, anns_dir, voc_devkit_dir):
     """Evaluates all results in an output directory"""
     name = name_from_output_dir(output_dir)
@@ -139,16 +222,18 @@ def eval_all(output_dir, method, threshold, set_dir, anns_dir, voc_devkit_dir):
         "0" + str(int(threshold * 10)) if method == "bbox" else "0" + str(threshold[0])
     )
 
+    all_anns = load_eval_anns(anns_dir)
+
     results = {}
     for set_name in {"train", "val"}:
         prediction_dirs = glob.glob(
             os.path.join(output_dir, f"{set_name}_predictions*")
         )
 
-        anns_file = f"{set_name}_{threshold_str}.json"
-        if method == "point":
-            anns_file = "point_" + anns_file
-        eval_anns_file = os.path.join(anns_dir, anns_file)
+        ids = set(np.loadtxt(os.path.join(set_dir, f"{set_name}.txt"), dtype=str))
+        eval_anns = {
+            file[:-4]: anns for file, anns in all_anns.items() if file[:-4] in ids
+        }
 
         for prediction_dir in sorted(prediction_dirs):
             epoch = prediction_dir.split("_")[-1][-3:]
@@ -161,7 +246,7 @@ def eval_all(output_dir, method, threshold, set_dir, anns_dir, voc_devkit_dir):
                 files=os.path.join(prediction_dir, "*.json"),
                 temp_dir=os.path.join(output_dir, "temp_voc_dir"),
                 set_dir=set_dir,
-                eval_anns_file=eval_anns_file,
+                eval_anns=eval_anns,
                 voc_devkit_dir=voc_devkit_dir,
             )
 
@@ -184,7 +269,7 @@ def voc_eval(
     files,
     temp_dir,
     set_dir,
-    eval_anns_file,
+    eval_anns,
     voc_devkit_dir,
 ):
     # load predictions
@@ -198,12 +283,6 @@ def voc_eval(
     }
     eval_sets = {k: {tuple(x[:2]): x[2] for x in v} for k, v in eval_sets.items()}
     eval_counts = {k: len(v) for k, v in eval_sets.items()}
-
-    # load eval annotations
-    eval_anns = defaultdict(list)
-    for ann in json.load(open(eval_anns_file)):
-        if "object_id" in ann:
-            eval_anns[ann["filename"]].append(ann)
 
     # sort annotations by filename
     pred_anns = dict(sorted(pred_anns.items()))
@@ -311,7 +390,7 @@ def main(
         rows.append(values)
     df = pd.DataFrame(rows, columns=columns)
     df = df.sort_values(["name", "set", "epoch"])
-    df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
+    # df.to_csv(os.path.join(output_dir, "voc_results.csv"), index=False)
 
     coco_results = coco_eval(output_dir)
     coco_columns = ["name", "set", "epoch"]
@@ -341,7 +420,7 @@ parser.add_argument("--anns-dir", type=str, required=True)
 parser.add_argument("--voc-devkit-dir", type=str, required=True)
 parser.add_argument("--method", default="bbox", type=str)
 parser.add_argument("--iou-threshold", default=0.3, type=float)
-parser.add_argument("--point-threshold", default=2, type=float)
+parser.add_argument("--point-threshold", default=1, type=float)
 
 
 if __name__ == "__main__":
@@ -349,7 +428,7 @@ if __name__ == "__main__":
     if args.method not in {"bbox", "point"}:
         raise ValueError(f"Unknown method: {args.method}")
     threshold = (
-        args.iou_threshold if args.method == "bbox" else (args.point_threshold, 0.01)
+        args.iou_threshold if args.method == "bbox" else (args.point_threshold, 0.1)
     )
     main(
         output_dir=args.output_dir,
