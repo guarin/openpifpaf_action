@@ -20,7 +20,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
 
     side_length = None
     min_radius = None
-    save_radius = -1
+    save_raw = False
     strategy = "max"
 
     def __init__(self, head_metas):
@@ -63,7 +63,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
             "--aif-decoder-min-radius", default=cls.min_radius, type=float
         )
         group.add_argument(
-            "--aif-decoder-save-radius", default=cls.save_radius, type=int
+            "--aif-decoder-save-raw", default=cls.save_raw, action="store_true"
         )
         group.add_argument("--aif-decoder-strategy", default=cls.strategy, type=str)
 
@@ -71,7 +71,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
     def configure(cls, args: argparse.Namespace):
         cls.side_length = args.aif_decoder_side_length
         cls.min_radius = args.aif_decoder_min_radius
-        cls.save_radius = args.aif_decoder_save_radius
+        cls.save_raw = args.aif_decoder_save_raw
         if args.aif_decoder_strategy not in STRATEGIES:
             LOG.error(
                 "Unknown decoder strategy %s , select one of : %s",
@@ -92,28 +92,25 @@ class AifCenter(openpifpaf.decoder.Decoder):
             scale = np.sqrt(area) / meta.stride
             radius = int(np.round(max(self.min_radius, scale * self.side_length)))
             side_length = 2 * radius + 1
-            save_side_length = 2 * self.save_radius + 1
 
             centers = utils.keypoint_centers(cifcaf_ann.data, meta.keypoint_indices)
             centers = np.array(centers) / meta.stride
             int_centers = np.round(centers - radius).astype(int)
-            int_save_centers = np.round(centers - self.save_radius).astype(int)
 
             probability_fields = action_probabilities[:, 0]
 
             probabilities = []
-            save_probability_fields = []
-            for int_center, int_save_center in zip(int_centers, int_save_centers):
+            for int_center in int_centers:
                 i, j = int_center
                 box = [j, i, side_length, side_length]
                 probabilities.append(utils.read_values(probability_fields, box))
 
-                if self.save_radius >= 0:
-                    si, sj = int_save_center
-                    save_box = [sj, si, save_side_length, save_side_length]
-                    save_probability_fields.append(
-                        utils.read_values(probability_fields, save_box).tolist()
-                    )
+            if self.save_raw:
+                save_probabilities = np.where(
+                    np.isnan(probabilities), None, probabilities
+                ).tolist()
+            else:
+                save_probabilities = []
 
             # remove empty arrays
             probabilities = [
@@ -135,7 +132,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
                     true_actions=None,
                     all_actions=meta.actions,
                     action_probabilities=probabilities,
-                    action_probability_fields=save_probability_fields,
+                    action_probability_fields=save_probabilities,
                 )
             )
 
