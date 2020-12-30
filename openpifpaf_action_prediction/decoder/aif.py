@@ -13,7 +13,7 @@ from openpifpaf.decoder import CifCaf
 
 LOG = logging.getLogger(__name__)
 
-STRATEGIES = {"max"}
+STRATEGIES = ["max", "mean"]
 
 
 class AifCenter(openpifpaf.decoder.Decoder):
@@ -21,7 +21,7 @@ class AifCenter(openpifpaf.decoder.Decoder):
     side_length = None
     min_radius = None
     save_raw = False
-    strategy = "max"
+    strategy = "mean"
 
     def __init__(self, head_metas):
         super().__init__()
@@ -117,11 +117,13 @@ class AifCenter(openpifpaf.decoder.Decoder):
                 p for p in probabilities if (p.size > 0) and not np.isnan(p).all()
             ]
 
+            probabilities = np.array(probabilities)
             if len(probabilities) > 0:
                 if self.strategy == "max":
-                    probabilities = np.nanmax(
-                        np.array(probabilities), (0, 2, 3)
-                    ).tolist()
+                    probabilities = np.nanmax(probabilities, (0, 2, 3))
+                elif self.strategy == "mean":
+                    probabilities = np.nanmean(probabilities, (0, 2, 3))
+                probabilities = probabilities.tolist()
             else:
                 probabilities = [None] * probability_fields.shape[0]
 
