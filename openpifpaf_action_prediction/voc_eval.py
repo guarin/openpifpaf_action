@@ -237,13 +237,17 @@ def eval_all(output_dir, method, threshold, set_dir, anns_dir, voc_devkit_dir):
 
         for prediction_dir in sorted(prediction_dirs):
             epoch = prediction_dir.split("_")[-1][-3:]
+            pred_anns = dict(
+                load_json(file)
+                for file in glob.glob(os.path.join(prediction_dir, "*.json"))
+            )
 
             print(f"Evaluating {name} {set_name} {epoch}")
             result, matched_result = voc_eval(
                 method=method,
                 threshold=threshold,
                 set_name=set_name,
-                files=os.path.join(prediction_dir, "*.json"),
+                pred_anns=pred_anns,
                 temp_dir=os.path.join(output_dir, "temp_voc_dir"),
                 set_dir=set_dir,
                 eval_anns=eval_anns,
@@ -266,15 +270,13 @@ def voc_eval(
     method,
     threshold,
     set_name,
-    files,
+    pred_anns,
     temp_dir,
     set_dir,
     eval_anns,
     voc_devkit_dir,
+    return_matcher=False,
 ):
-    # load predictions
-    pred_anns = dict(load_json(file) for file in glob.glob(files))
-
     # load eval sets per action class
     set_files = os.path.join(set_dir, f"*_{set_name}.txt")
     eval_sets = {
@@ -331,7 +333,10 @@ def voc_eval(
     )
 
     shutil.rmtree(temp_dir)
-    return results, matched_results
+    if return_matcher:
+        return results, matched_results, matcher
+    else:
+        return results, matched_results
 
 
 _matlab_engine = None
