@@ -10,7 +10,7 @@ pip install -e .[train,test]
 cd ..
 
 # install openpifpaf_action plugin
-git clone openpifpaf_action
+git clone https://github.com/guarin/openpifpaf_action
 cd openpifpaf_action
 pip install -e .
 
