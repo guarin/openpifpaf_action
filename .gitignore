@@ -10,7 +10,7 @@ __pycache__
 
 # Other
 .ipynb_checkpoints
-*.ipynb
+Untitled*.ipynb
 test*
 data/
 outputs/
