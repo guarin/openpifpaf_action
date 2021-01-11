@@ -30,11 +30,11 @@ python -m openpifpaf_action.data_preprocessing.pascal <arguments>
 python -m openpifpaf_action.data_preprocessing.stanford <arguments>
 ``` 
 
-### Training
-Follow instructions at https://vita-epfl.github.io/openpifpaf/dev/train.html
+### Training
+Follow instructions at https://vita-epfl.github.io/openpifpaf/dev/train.html  
 Use `python -m openpifpaf.train --help` for an overview of all plugin arguments
 
-### Evaluation
+### Evaluation
 ```
 # Pascal VOC 2012
 python -m openpifpaf.predict \
