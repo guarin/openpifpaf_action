@@ -1,4 +1,4 @@
-# OpenPifPaf Human Action Prediction Plugin
+# OpenPifPaf Action Plugin
 
 ### Installation
 ```
